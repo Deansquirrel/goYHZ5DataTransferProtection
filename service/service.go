@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/Deansquirrel/goToolCommon"
 	log "github.com/Deansquirrel/goToolLog"
@@ -10,6 +11,7 @@ import (
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/worker"
 	"github.com/kataras/iris/core/errors"
 	"github.com/robfig/cron"
+	"sort"
 	"strings"
 )
 
@@ -19,8 +21,60 @@ func StartService() error {
 	startHeartBeat()
 	startRefreshMdDataTransState()
 	startRestoreMdYyStateTransTime()
+	startRefreshWaitRestoreDataCount()
+	startRestoreMdYyStateRestoreTime()
+	startRestoreMdYyState()
+	startRestoreMdSet()
+	startRestoreCwGsSet()
+	startRestoreMdCwGsRef()
+
+	//Test
+	{
+		go func() {
+			c := cron.New()
+			err := c.AddFunc("5/30 * * * * ?", showTaskState)
+			if err != nil {
+				log.Debug(err.Error())
+			} else {
+				c.Start()
+			}
+		}()
+	}
 
 	return nil
+}
+
+//显示任务状态
+func showTaskState() {
+	idList := global.TaskList.GetIdList()
+	sort.Strings(idList)
+
+	for _, k := range idList {
+		testPrintS(global.TaskList.GetObject(k).(*object.TaskState))
+	}
+}
+
+//输出TaskState
+func testPrintS(ts *object.TaskState) {
+	if ts == nil {
+		log.Debug("ts is nil")
+		return
+	}
+	str, err := json.Marshal(ts)
+	if err != nil {
+		log.Debug(fmt.Sprintf("%s - %s", ts.Key, err.Error()))
+	} else {
+		log.Debug(fmt.Sprintf("%s - %s", ts.Key, str))
+	}
+	c := ts.Cron
+	if c != nil {
+		if len(c.Entries()) > 0 {
+			e := c.Entries()[0]
+			log.Debug(fmt.Sprintf("Prev time: %s,Next time: %s",
+				goToolCommon.GetDateTimeStr(e.Prev),
+				goToolCommon.GetDateTimeStr(e.Next)))
+		}
+	}
 }
 
 //Common（心跳）
@@ -42,6 +96,48 @@ func startRestoreMdYyStateTransTime() {
 	ch := make(chan error)
 	workerTd := worker.NewWorkerTd(ch)
 	startWorker(object.TaskKeyRestoreMdYyStateTransTime, workerTd.RestoreMdYyStateTransTime, ch)
+}
+
+//总部库
+func startRefreshWaitRestoreDataCount() {
+	ch := make(chan error)
+	w := worker.NewWorkerZb(ch)
+	startWorker(object.TaskKeyRefreshWaitRestoreDataCount, w.RefreshWaitRestoreDataCount, ch)
+}
+
+//总部库
+func startRestoreMdYyStateRestoreTime() {
+	ch := make(chan error)
+	w := worker.NewWorkerZb(ch)
+	startWorker(object.TaskKeyRestoreMdYyStateRestoreTime, w.RestoreMdYyStateRestoreTime, ch)
+}
+
+//总部库
+func startRestoreMdYyState() {
+	ch := make(chan error)
+	w := worker.NewWorkerZb(ch)
+	startWorker(object.TaskKeyRestoreMdYyState, w.RestoreMdYyState, ch)
+}
+
+//总部库
+func startRestoreMdSet() {
+	ch := make(chan error)
+	w := worker.NewWorkerZb(ch)
+	startWorker(object.TaskKeyRestoreMdSet, w.RestoreMdSet, ch)
+}
+
+//总部库
+func startRestoreCwGsSet() {
+	ch := make(chan error)
+	w := worker.NewWorkerZb(ch)
+	startWorker(object.TaskKeyRestoreCwGsSet, w.RestoreCwGsSet, ch)
+}
+
+//总部库
+func startRestoreMdCwGsRef() {
+	ch := make(chan error)
+	w := worker.NewWorkerZb(ch)
+	startWorker(object.TaskKeyRestoreMdCwGsRef, w.RestoreMdCwGsRef, ch)
 }
 
 //启动工作线程
@@ -92,10 +188,11 @@ func startWorker(key object.TaskKey, cmd func(), ch chan error) {
 
 //根据key获取任务执行Cron时间公式
 func getTaskCron(key object.TaskKey) (string, error) {
-	log.Debug(fmt.Sprintf("根据key获取任务执行Cron时间公式 %s", key))
-	//TODO 根据key获取任务执行Cron时间公式
-	repCommon := rep.NewCommon()
-	taskCron, err := repCommon.GetTaskCronByKey(string(key))
+	repConfig, err := rep.NewConfig()
+	if err != nil {
+		return "", err
+	}
+	taskCron, err := repConfig.GetTaskCronByKey(key)
 	if err != nil {
 		return "", err
 	}

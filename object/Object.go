@@ -15,12 +15,12 @@ type TaskState struct {
 
 //门店数据传递信道状态
 type MdDataTransState struct {
-	RecordTime time.Time //记录时间
-	MdCode     string    //门店通道码
-	ChanId     int       //信道ID
-	RowCount   int       //暂存数据总量
-	LastUp     time.Time //门店最后上传时间
-	LastUpRcv  time.Time //总部最后接收时间
+	RecordTime   time.Time //记录时间
+	MdCode       string    //门店通道码
+	ChanId       int       //信道ID
+	DataRowCount int       //暂存数据总量
+	LastUp       time.Time //门店最后上传时间
+	LastUpRcv    time.Time //总部最后接收时间
 }
 
 //门店营业日开闭店记录传递时间（通道库）
@@ -61,8 +61,9 @@ type ConnInfo struct {
 
 //任务执行时间配置表
 type TaskCron struct {
-	Key  string //任务标识
-	Cron string //任务执行cron公式
+	TaskKey         TaskKey //任务标识
+	TaskDescription string  //任务描述
+	Cron            string  //任务执行cron公式
 }
 
 //固化项目表
@@ -73,17 +74,3 @@ type ZlFixedList struct {
 	FlIndex string //固化项索引码
 	FlSn    string //固化项顺序
 }
-
-type TaskKey string
-
-const (
-	TaskKeyHeartBeat                   TaskKey = "HeartBeat"
-	TaskKeyRefreshMdDataTransState     TaskKey = "RefreshMdDataTransState"
-	TaskKeyRestoreMdYyStateTransTime   TaskKey = "RestoreMdYyStateTransTime"
-	TaskKeyRefreshWaitRestoreDataCount TaskKey = "RefreshWaitRestoreDataCount"
-	TaskKeyRestoreMdYyStateRestoreTime TaskKey = "RestoreMdYyStateRestoreTime"
-	TaskKeyRestoreMdYyState            TaskKey = "RestoreMdYyState"
-	TaskKeyRestoreMdSet                TaskKey = "RestoreMdSet"
-	TaskKeyRestoreCwGsSet              TaskKey = "RestoreCwGsSet"
-	TaskKeyRestoreMdCwGsRef            TaskKey = "RestoreMdCwGsRef"
-)

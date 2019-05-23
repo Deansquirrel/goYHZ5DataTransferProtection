@@ -13,14 +13,12 @@ type SystemConfig struct {
 	Total   systemConfigTotal   `toml:"total"`
 	DB      systemConfigDB      `toml:"configDb"`
 	Service systemConfigService `toml:"service"`
-	Task    systemConfigTask    `toml:"task"`
 }
 
 func (sc *SystemConfig) FormatConfig() {
 	sc.Total.FormatConfig()
 	sc.DB.FormatConfig()
 	sc.Service.FormatConfig()
-	sc.Task.FormatConfig()
 }
 
 func (sc *SystemConfig) ToString() string {
@@ -99,20 +97,5 @@ func (sc *systemConfigService) FormatConfig() {
 	}
 	if sc.Description == "" {
 		sc.Description = sc.Name
-	}
-}
-
-//任务配置
-type systemConfigTask struct {
-	RowDataUpdateCron string `toml:"rowDataUpdateCron"`
-	YyStateUpdateCron string `toml:"yyStateUpdateCron"`
-}
-
-func (sc *systemConfigTask) FormatConfig() {
-	if strings.Trim(sc.RowDataUpdateCron, " ") == "" {
-		sc.RowDataUpdateCron = "0 0 * * * ?"
-	}
-	if strings.Trim(sc.YyStateUpdateCron, " ") == "" {
-		sc.YyStateUpdateCron = "0 1 * * * ?"
 	}
 }

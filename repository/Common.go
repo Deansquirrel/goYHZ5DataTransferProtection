@@ -1,10 +1,14 @@
 package repository
 
 import (
+	"database/sql"
+	"errors"
+	"fmt"
 	"github.com/Deansquirrel/goToolMSSql"
 	"github.com/Deansquirrel/goToolMSSql2000"
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/global"
-	"github.com/Deansquirrel/goYHZ5DataTransferProtection/object"
+	"strconv"
+	"strings"
 )
 
 import log "github.com/Deansquirrel/goToolLog"
@@ -17,7 +21,7 @@ func NewCommon() *common {
 }
 
 //获取配置库连接配置
-func (c *common) getConfigDbConfig() *goToolMSSql.MSSqlConfig {
+func (c *common) GetConfigDbConfig() *goToolMSSql.MSSqlConfig {
 	return &goToolMSSql.MSSqlConfig{
 		Server: global.SysConfig.DB.Server,
 		Port:   global.SysConfig.DB.Port,
@@ -27,26 +31,8 @@ func (c *common) getConfigDbConfig() *goToolMSSql.MSSqlConfig {
 	}
 }
 
-func (c *common) getTdDbConfig() (*goToolMSSql.MSSqlConfig, error) {
-	//TODO 获取通道库连接配置
-	log.Debug("获取通道库连接配置")
-	return nil, nil
-}
-
-func (c *common) getZbDbConfig() (*goToolMSSql.MSSqlConfig, error) {
-	//TODO 获取总部库连接配置
-	log.Debug("获取总部库连接配置")
-	return nil, nil
-}
-
-func (c *common) getDbConfigByStr(config string) (*goToolMSSql.MSSqlConfig, error) {
-	//TODO 根据配置字符号串获取数据库连接配置
-	log.Debug("根据配置字符号串获取数据库连接配置")
-	return nil, nil
-}
-
 //将普通数据库连接配置转换为Sql2000可用的配置
-func (c *common) convertDbConfigTo2000(dbConfig *goToolMSSql.MSSqlConfig) *goToolMSSql2000.MSSqlConfig {
+func (c *common) ConvertDbConfigTo2000(dbConfig *goToolMSSql.MSSqlConfig) *goToolMSSql2000.MSSqlConfig {
 	return &goToolMSSql2000.MSSqlConfig{
 		Server: dbConfig.Server,
 		Port:   dbConfig.Port,
@@ -56,16 +42,75 @@ func (c *common) convertDbConfigTo2000(dbConfig *goToolMSSql.MSSqlConfig) *goToo
 	}
 }
 
-//获取任务执行时间配置
-func (c *common) GetTaskCron() ([]*object.TaskCron, error) {
-	// TODO 获取任务执行时间配置
-	log.Debug("获取任务执行时间配置")
-	return nil, nil
+//根据字符串配置，获取数据库连接配置
+func (c *common) getDBConfigByStr(connStr string) (*goToolMSSql.MSSqlConfig, error) {
+	log.Debug(fmt.Sprintf("根据字符串配置，获取数据库连接配置,str: %s", connStr))
+	connStr = strings.Trim(connStr, " ")
+	strList := strings.Split(connStr, "|")
+	if len(strList) != 5 {
+		err := errors.New(fmt.Sprintf("db config num error,exp 5,act %d", len(strList)))
+		log.Error(err.Error())
+		return nil, err
+	}
+
+	port, err := strconv.Atoi(strList[1])
+	if err != nil {
+		errLs := errors.New(fmt.Sprintf("db config port[%s] trans err: %s", strList[1], err.Error()))
+		log.Error(errLs.Error())
+		return nil, errLs
+	}
+
+	return &goToolMSSql.MSSqlConfig{
+		Server: strList[0],
+		Port:   port,
+		User:   strList[2],
+		Pwd:    strList[3],
+		DbName: strList[4],
+	}, nil
 }
 
-//根据Key获取任务执行时间配置
-func (c *common) GetTaskCronByKey(key string) (*object.TaskCron, error) {
-	// TODO 获取任务执行时间配置
-	log.Debug("获取任务执行时间配置")
-	return nil, nil
+func (c *common) GetRowsBySQL(dbConfig *goToolMSSql.MSSqlConfig, sql string, args ...interface{}) (*sql.Rows, error) {
+	conn, err := goToolMSSql.GetConn(dbConfig)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, err
+	}
+	if args == nil {
+		rows, err := conn.Query(sql)
+		if err != nil {
+			log.Error(err.Error())
+			return nil, err
+		}
+		return rows, nil
+	} else {
+		rows, err := conn.Query(sql, args...)
+		if err != nil {
+			log.Error(err.Error())
+			return nil, err
+		}
+		return rows, nil
+	}
+}
+
+func (c *common) SetRowsBySQL(dbConfig *goToolMSSql.MSSqlConfig, sql string, args ...interface{}) error {
+	conn, err := goToolMSSql.GetConn(dbConfig)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	if args == nil {
+		_, err = conn.Exec(sql)
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
+		return nil
+	} else {
+		_, err := conn.Exec(sql, args...)
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
+		return nil
+	}
 }

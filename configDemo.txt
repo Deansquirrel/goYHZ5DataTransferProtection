@@ -12,11 +12,6 @@ dbName=""
 user=""
 pwd=""
 
-[task]
-# 任务执行时间
-rowDataUpdateCron=""
-yyStateUpdateCron=""
-
 [service]
 # 安装为服务时所需配置
 name=""

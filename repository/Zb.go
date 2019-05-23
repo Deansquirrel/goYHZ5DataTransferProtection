@@ -1,28 +1,44 @@
 package repository
 
 import (
-	"database/sql"
+	"errors"
+	"github.com/Deansquirrel/goToolMSSql"
 	"github.com/Deansquirrel/goToolMSSql2000"
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/object"
 )
 
+import log "github.com/Deansquirrel/goToolLog"
+
 //门店信道数据
 type zb struct {
-	db *sql.DB
+	dbConfig       *goToolMSSql2000.MSSqlConfig
+	configDbConfig *goToolMSSql.MSSqlConfig
 }
 
 func NewRepZb() (*zb, error) {
-	c := common{}
-	dbConfig, err := c.getZbDbConfig()
+	repConfig, err := NewConfig()
 	if err != nil {
 		return nil, err
 	}
-	conn, err := goToolMSSql2000.GetConn(c.convertDbConfigTo2000(dbConfig))
+	dbConfig, err := repConfig.GetDbConfig(object.ConnTypeKeyZb)
 	if err != nil {
 		return nil, err
+	}
+	if dbConfig == nil {
+		errMsg := "td db config is nil"
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	c := common{}
+	configDbConfig := c.GetConfigDbConfig()
+	if configDbConfig == nil {
+		errMsg := "config db config is nil"
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
 	}
 	return &zb{
-		db: conn,
+		dbConfig:       c.ConvertDbConfigTo2000(dbConfig),
+		configDbConfig: configDbConfig,
 	}, nil
 }
 
