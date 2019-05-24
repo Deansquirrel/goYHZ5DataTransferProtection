@@ -120,3 +120,17 @@ func (r *zb) getBatchNo() string {
 	time.Sleep(time.Second)
 	return bn
 }
+
+//获取财务公司设置操作首条记录（不存在则返回nil）
+func (r *zb) GetLstCwGsSetOpr() (*object.OprCwGsSet, error) {
+	//TODO 获取财务公司设置操作首条记录（不存在则返回nil）
+	log.Debug("获取财务公司设置操作首条记录（不存在则返回nil）")
+	return nil, nil
+}
+
+//删除财务公司设置操作记录
+func (r *zb) DelCwGsSetOpr(sn int) error {
+	//TODO 删除财务公司设置操作记录
+	log.Debug("删除财务公司设置操作记录")
+	return nil
+}

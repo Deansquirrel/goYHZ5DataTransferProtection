@@ -76,6 +76,15 @@ type WaitRestoreDataCount struct {
 	RecordDate   time.Time //记录时间
 }
 
+//财务公司设置操作记录（触发器触发）
+type OprCwGsSet struct {
+	Sn      int       //操作SN
+	GsId    int       //公司ID
+	GsName  string    //公司名称
+	OprType int       //操作类型，1-新增（启用）、2-修改、3-删除
+	OprTime time.Time //操作时间
+}
+
 //连接配置
 type ConnInfo struct {
 	TdConn string //通道库连接配置

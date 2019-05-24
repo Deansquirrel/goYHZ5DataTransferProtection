@@ -64,6 +64,9 @@ const (
 		"UPDATE mddatatransstate " +
 		"SET DATROWCOUNT=? " +
 		"WHERE batchno=? AND MDCODE=? AND CHANID = ?"
+	sqlInsertCwGsSet = "" +
+		"INSERT INTO [cwgsset]([gsid],[gsname],[lastupdate]) " +
+		"VALUES (?,?,GETDATE())"
 )
 
 type config struct {
@@ -247,4 +250,38 @@ func (c *config) AddMdDataTransState(dList []*object.MdDataTransState) error {
 func (c *config) UpdateMdDataTransState(batchNo string, mdCode string, chanId int, rowCount int) error {
 	comm := common{}
 	return comm.SetRowsBySQL(c.dbConfig, sqlUpdateMdDataTransState, rowCount, batchNo, mdCode, chanId)
+}
+
+//根据操作更新财务公司设置
+func (c *config) UpdateCwGsSet(opr *object.OprCwGsSet) error {
+	switch opr.OprType {
+	case 1:
+		return c.cwGsSetInsert(opr)
+	case 2:
+		return c.cwGsSetUpdate(opr)
+	case 3:
+		return c.cwGsSetDelete(opr)
+	default:
+		errMsg := fmt.Sprintf("cwgs set opr type error,exp 1 or 2 or 3 got %d", opr.OprType)
+		log.Error(errMsg)
+		return errors.New(errMsg)
+	}
+}
+
+//新增财务公司设置
+func (c *config) cwGsSetInsert(opr *object.OprCwGsSet) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL(c.dbConfig, sqlInsertCwGsSet, opr.GsId, opr.GsName)
+}
+
+//更新财务公司设置
+func (c *config) cwGsSetDelete(opr *object.OprCwGsSet) error {
+	//TODO 更新财务公司设置
+	return nil
+}
+
+//删除财务公司设置
+func (c *config) cwGsSetUpdate(opr *object.OprCwGsSet) error {
+	//TODO 删除财务公司设置
+	return nil
 }
