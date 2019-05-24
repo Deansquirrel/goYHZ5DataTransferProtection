@@ -3,9 +3,10 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goToolMSSql"
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/object"
-	"strconv"
+	"strings"
 	"time"
 )
 
@@ -59,7 +60,7 @@ func NewRepTd() (*td, error) {
 //获取门店数据传递信道状态
 func (r *td) GetMdDataTransState() ([]*object.MdDataTransState, error) {
 	log.Debug("获取门店数据传递信道状态(rep)")
-	c := common{}
+	c := NewCommon()
 	rows, err := c.GetRowsBySQL(r.dbConfig, sqlGetMdDataTransState, object.TdUserCode)
 	if err != nil {
 		return nil, err
@@ -72,6 +73,7 @@ func (r *td) GetMdDataTransState() ([]*object.MdDataTransState, error) {
 	var mdCode string
 	var chanId int
 	var datLstUp, datLstUpRcv time.Time
+	batchNo := r.getBatchNo()
 	for rows.Next() {
 		err = rows.Scan(&mdCode, &chanId, &datLstUp, &datLstUpRcv)
 		if err != nil {
@@ -80,12 +82,13 @@ func (r *td) GetMdDataTransState() ([]*object.MdDataTransState, error) {
 			return nil, errors.New(errMsg)
 		}
 		state := object.MdDataTransState{
-			RecordTime:   currTime,
+			BatchNo:      batchNo,
 			MdCode:       mdCode,
 			ChanId:       chanId,
 			DataRowCount: -1,
 			LastUp:       datLstUp,
 			LastUpRcv:    datLstUpRcv,
+			RecordTime:   currTime,
 		}
 		resultList = append(resultList, &state)
 	}
@@ -94,24 +97,11 @@ func (r *td) GetMdDataTransState() ([]*object.MdDataTransState, error) {
 		log.Error(errMsg)
 		return nil, errors.New(errMsg)
 	}
-
-	var lastErr error
-	for _, s := range resultList {
-		tableName := fmt.Sprintf("zl" + object.TdUserCode + s.MdCode + "tfupv3_" + strconv.Itoa(s.ChanId))
-		count, err := r.getDataRowCount(tableName)
-		if err != nil {
-			log.Error(err.Error())
-			lastErr = err
-		} else {
-			s.DataRowCount = count
-		}
-	}
-	return resultList, lastErr
+	return resultList, nil
 }
 
 //获取通道库表中的数据行数
-func (r *td) getDataRowCount(tableName string) (int, error) {
-	log.Debug(tableName)
+func (r *td) GetDataRowCount(tableName string) (int, error) {
 	c := common{}
 	rows, err := c.GetRowsBySQL(r.dbConfig, fmt.Sprintf(sqlGetMdDataTransStateDataRowCount, tableName))
 	if err != nil {
@@ -152,4 +142,17 @@ func (r *td) getDbConnConfig() (*goToolMSSql.MSSqlConfig, error) {
 		return nil, err
 	}
 	return repConfig.GetDbConfig(object.ConnTypeKeyTd)
+}
+
+//产生操作批次号
+func (r *td) getBatchNo() string {
+	rppZbSyncLock.Lock()
+	defer rppZbSyncLock.Unlock()
+	bn := goToolCommon.GetDateTimeStr(time.Now())
+	bn = strings.Replace(bn, " ", "", -1)
+	bn = strings.Replace(bn, ":", "", -1)
+	bn = strings.Replace(bn, "-", "", -1)
+	bn = bn[2:]
+	time.Sleep(time.Second)
+	return bn
 }

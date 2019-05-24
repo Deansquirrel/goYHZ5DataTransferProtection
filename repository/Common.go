@@ -9,6 +9,7 @@ import (
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/global"
 	"strconv"
 	"strings"
+	"time"
 )
 
 import log "github.com/Deansquirrel/goToolLog"
@@ -113,4 +114,55 @@ func (c *common) SetRowsBySQL(dbConfig *goToolMSSql.MSSqlConfig, sql string, arg
 		}
 		return nil
 	}
+}
+
+func (c *common) GetRowsBySQL2000(dbConfig *goToolMSSql2000.MSSqlConfig, sql string, args ...interface{}) (*sql.Rows, error) {
+	conn, err := goToolMSSql2000.GetConn(dbConfig)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, err
+	}
+	if args == nil {
+		rows, err := conn.Query(sql)
+		if err != nil {
+			log.Error(err.Error())
+			return nil, err
+		}
+		return rows, nil
+	} else {
+		rows, err := conn.Query(sql, args...)
+		if err != nil {
+			log.Error(err.Error())
+			return nil, err
+		}
+		return rows, nil
+	}
+}
+
+func (c *common) SetRowsBySQL2000(dbConfig *goToolMSSql2000.MSSqlConfig, sql string, args ...interface{}) error {
+	conn, err := goToolMSSql2000.GetConn(dbConfig)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	if args == nil {
+		_, err = conn.Exec(sql)
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
+		return nil
+	} else {
+		_, err := conn.Exec(sql, args...)
+		if err != nil {
+			log.Error(err.Error())
+			return err
+		}
+		return nil
+	}
+}
+
+//返回默认时间
+func (c *common) GetDefaultOprTime() time.Time {
+	return time.Date(1900, 1, 1, 0, 0, 0, 0, time.Local)
 }

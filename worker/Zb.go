@@ -1,6 +1,9 @@
 package worker
 
-import log "github.com/Deansquirrel/goToolLog"
+import (
+	log "github.com/Deansquirrel/goToolLog"
+	"github.com/Deansquirrel/goYHZ5DataTransferProtection/repository"
+)
 
 type zb struct {
 	errChan chan<- error
@@ -14,8 +17,41 @@ func NewWorkerZb(errChan chan<- error) *zb {
 
 //刷新待恢复信道数据总量
 func (w *zb) RefreshWaitRestoreDataCount() {
-	//TODO 刷新待恢复信道数据总量
 	log.Debug("刷新待恢复信道数据总量")
+	repZb, err := repository.NewRepZb()
+	if err != nil {
+		w.errChan <- err
+		return
+	}
+	repConfig, err := repository.NewConfig()
+	if err != nil {
+		w.errChan <- err
+		return
+	}
+	waitRestoreDataCount, err := repZb.GetWaitRestoreDataCount()
+	if err != nil {
+		w.errChan <- err
+		return
+	}
+	err = repConfig.AddWaitRestoreDataCountRecord(waitRestoreDataCount)
+	if err != nil {
+		w.errChan <- err
+		return
+	}
+	for i := 1; i <= 4; i++ {
+		ri := i
+		go func() {
+			count, uTime, err := repZb.GetChanWaitRestoreDataCount(ri)
+			if err != nil {
+				w.errChan <- err
+			} else {
+				err = repConfig.UpdateWaitRestoreDataCount(waitRestoreDataCount.BatchNo, ri, uTime, count)
+				if err != nil {
+					w.errChan <- err
+				}
+			}
+		}()
+	}
 }
 
 //恢复门店营业日开闭店记录恢复时间

@@ -1,9 +1,11 @@
 package worker
 
 import (
-	"encoding/json"
+	"fmt"
 	log "github.com/Deansquirrel/goToolLog"
+	"github.com/Deansquirrel/goYHZ5DataTransferProtection/object"
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/repository"
+	"strconv"
 )
 
 type td struct {
@@ -18,29 +20,42 @@ func NewWorkerTd(errChan chan<- error) *td {
 
 //刷新门店数据信道传递状态
 func (w *td) RefreshMdDataTransState() {
-	//TODO 刷新门店数据信道传递状态
 	log.Debug("刷新门店数据信道传递状态")
-	rep, err := repository.NewRepTd()
+	repTd, err := repository.NewRepTd()
 	if err != nil {
 		w.errChan <- err
 		return
 	}
-	sList, err := rep.GetMdDataTransState()
+	rep, err := repository.NewConfig()
 	if err != nil {
 		w.errChan <- err
+		return
 	}
-
-	if sList != nil {
-		for _, s := range sList {
-			dataStr, err := json.Marshal(s)
+	sList, err := repTd.GetMdDataTransState()
+	if err != nil {
+		w.errChan <- err
+		return
+	}
+	err = rep.AddMdDataTransState(sList)
+	if err != nil {
+		w.errChan <- err
+		return
+	}
+	for _, d := range sList {
+		cd := d
+		go func() {
+			tableName := fmt.Sprintf("zl" + object.TdUserCode + cd.MdCode + "tfupv3_" + strconv.Itoa(cd.ChanId))
+			rowCount, err := repTd.GetDataRowCount(tableName)
 			if err != nil {
-				log.Debug(err.Error())
-			} else {
-				log.Debug(string(dataStr))
+				w.errChan <- err
+				return
 			}
-		}
+			err = rep.UpdateMdDataTransState(cd.BatchNo, cd.MdCode, cd.ChanId, rowCount)
+			if err != nil {
+				w.errChan <- err
+			}
+		}()
 	}
-	//TODO Save sList
 }
 
 //恢复门店营业日开闭店记录传递时间

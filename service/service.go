@@ -32,7 +32,7 @@ func StartService() error {
 	{
 		go func() {
 			c := cron.New()
-			err := c.AddFunc("5/30 * * * * ?", showTaskState)
+			err := c.AddFunc("0 * * * * ?", showTaskState)
 			if err != nil {
 				log.Debug(err.Error())
 			} else {
@@ -178,6 +178,7 @@ func startWorker(key object.TaskKey, cmd func(), ch chan error) {
 		for {
 			select {
 			case err := <-ch:
+				log.Error(err.Error())
 				s.Err = err
 			case <-global.Ctx.Done():
 				return
