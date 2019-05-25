@@ -22,6 +22,13 @@ const (
 	sqlGetMdDataTransStateDataRowCount = "" +
 		"SELECT COUNT(*) AS NUM " +
 		"FROM %s"
+	sqlGetLstMdYyStateTransTimeTdOpr = "" +
+		"SELECT TOP 1 [oprsn],[mdid],[mdyydate],[chanid],[oprtype],[oprtime] " +
+		"FROM [mdyystatetranstime] " +
+		"ORDER BY [oprsn] ASC"
+	sqlDelMdYyStateTransTimeTdOpr = "" +
+		"DELETE FROM [mdyystatetranstime] " +
+		"WHERE [oprsn] = ?"
 )
 
 //门店信道数据
@@ -55,6 +62,58 @@ func NewRepTd() (*td, error) {
 		dbConfig:       dbConfig,
 		configDbConfig: configDbConfig,
 	}, nil
+}
+
+//获取门店营业日开闭店记录传递首条记录（不存在则返回nil）
+func (r *td) GetLstMdYyStateTransTimeTdOpr() (*object.OprMdYyStateTransTimeTd, error) {
+	comm := NewCommon()
+	rows, err := comm.GetRowsBySQL(r.dbConfig, sqlGetLstMdYyStateTransTimeTdOpr)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+	rList := make([]*object.OprMdYyStateTransTimeTd, 0)
+	var oprSn, mdId, chanId, oprType int
+	var mdYyDate string
+	var oprTime time.Time
+	for rows.Next() {
+		err = rows.Scan(&oprSn, &mdId, &mdYyDate, &chanId, &oprType, &oprTime)
+		if err != nil {
+			errMsg := fmt.Sprintf("get last MdYyStateTransTimeTdOpr opr err: %s", err.Error())
+			log.Error(errMsg)
+			return nil, errors.New(errMsg)
+		}
+		rList = append(rList, &object.OprMdYyStateTransTimeTd{
+			OprSn:    oprSn,
+			MdId:     mdId,
+			MdYyDate: mdYyDate,
+			ChanId:   chanId,
+			OprType:  oprType,
+			OprTime:  oprTime,
+		})
+	}
+	if rows.Err() != nil {
+		errMsg := fmt.Sprintf("get last MdYyStateTransTimeTdOpr opr err: %s", rows.Err().Error())
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) > 1 {
+		errMsg := fmt.Sprintf("get last MdYyStateTransTimeTdOpr opr list count err: exp 1 act %d", len(rList))
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) == 0 {
+		return nil, nil
+	}
+	return rList[0], nil
+}
+
+//删除门店财务公司关系操作记录
+func (r *td) DelMdYyStateTransTimeTdOpr(sn int) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL(r.dbConfig, sqlDelMdYyStateTransTimeTdOpr, sn)
 }
 
 //获取门店数据传递信道状态

@@ -28,6 +28,7 @@ type MdDataTransState struct {
 type MdYyStateTransTimeTd struct {
 	MdId       int       //门店ID
 	MdYyDate   string    //门店营业日
+	ChanId     int       //信道id
 	OpenUp     time.Time //开店上传时间
 	OpenUpRcv  time.Time //开店接收时间
 	CloseUp    time.Time //闭店上传时间
@@ -35,10 +36,12 @@ type MdYyStateTransTimeTd struct {
 	LastUpdate time.Time //最后更新时间
 }
 
-type MdYyStateTransTimeTdTrans struct {
+//门店营业日开闭店记录传递时间（通道库）（触发器触发）
+type OprMdYyStateTransTimeTd struct {
 	OprSn    int       //操作顺序号
 	MdId     int       //门店ID
 	MdYyDate string    //门店营业日
+	ChanId   int       //信道id
 	OprType  int       //操作类型，1-开店上传、2-开店接收、3-闭店上传、4-闭店接收
 	OprTime  time.Time //操作时间
 }

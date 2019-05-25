@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"errors"
 	"fmt"
 	log "github.com/Deansquirrel/goToolLog"
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/object"
@@ -60,6 +61,40 @@ func (w *td) RefreshMdDataTransState() {
 
 //恢复门店营业日开闭店记录传递时间
 func (w *td) RestoreMdYyStateTransTime() {
-	// TODO 恢复门店营业日开闭店记录传递时间
 	log.Debug("恢复门店营业日开闭店记录传递时间")
+	repTd, err := repository.NewRepTd()
+	if err != nil {
+		w.errChan <- err
+		return
+	}
+	rep, err := repository.NewConfig()
+	if err != nil {
+		w.errChan <- err
+	}
+	for {
+		lstOpr, err := repTd.GetLstMdYyStateTransTimeTdOpr()
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+		if lstOpr == nil {
+			return
+		}
+		if lstOpr.OprType != 1 && lstOpr.OprType != 2 && lstOpr.OprType != 3 {
+			errMsg := fmt.Sprintf("opr type err,exp 1 or 2 or 3 or 4,got %d", lstOpr.OprType)
+			log.Error(errMsg)
+			w.errChan <- errors.New(errMsg)
+			return
+		}
+		err = rep.UpdateMdYyStateTransTimeTd(lstOpr)
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+		err = repTd.DelMdYyStateTransTimeTdOpr(lstOpr.OprSn)
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+	}
 }

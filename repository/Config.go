@@ -109,6 +109,58 @@ const (
 		"UPDATE [mdcwgsref] " +
 		"SET [gsid]=?,[lastupdate]=getDate() " +
 		"WHERE [mdid]=?"
+	sqlUpdateMdYyStateTransTimeTd1 = "" +
+		"IF EXISTS(SELECT * FROM [mdyystatetranstime] WHERE [mdid]=? AND [mdyydate]=? AND [chanid] = ?) " +
+		"BEGIN " +
+		"UPDATE [mdyystatetranstime] " +
+		"SET [openup] = ?,[lastupdate]=getDate() " +
+		"WHERE [mdid] = ? " +
+		"END " +
+		"ELSE " +
+		"BEGIN " +
+		"INSERT INTO [mdyystatetranstime]([mdid],[mdyydate],[chanid],[openup],[openuprcv]," +
+		"[closeup],[closeuprcv],[lastupdate]) " +
+		"VALUES (?,?,?,?,?,?,?,getDate()) " +
+		"END "
+	sqlUpdateMdYyStateTransTimeTd2 = "" +
+		"IF EXISTS(SELECT * FROM [mdyystatetranstime] WHERE [mdid]=? AND [mdyydate]=? AND [chanid] = ?) " +
+		"BEGIN " +
+		"UPDATE [mdyystatetranstime] " +
+		"SET [openuprcv] = ?,[lastupdate]=getDate() " +
+		"WHERE [mdid] = ? " +
+		"END " +
+		"ELSE " +
+		"BEGIN " +
+		"INSERT INTO [mdyystatetranstime]([mdid],[mdyydate],[chanid],[openup],[openuprcv]," +
+		"[closeup],[closeuprcv],[lastupdate]) " +
+		"VALUES (?,?,?,?,?,?,?,getDate()) " +
+		"END "
+	sqlUpdateMdYyStateTransTimeTd3 = "" +
+		"IF EXISTS(SELECT * FROM [mdyystatetranstime] WHERE [mdid]=? AND [mdyydate]=? AND [chanid] = ?) " +
+		"BEGIN " +
+		"UPDATE [mdyystatetranstime] " +
+		"SET [closeup] = ?,[lastupdate]=getDate() " +
+		"WHERE [mdid] = ? " +
+		"END " +
+		"ELSE " +
+		"BEGIN " +
+		"INSERT INTO [mdyystatetranstime]([mdid],[mdyydate],[chanid],[openup],[openuprcv]," +
+		"[closeup],[closeuprcv],[lastupdate]) " +
+		"VALUES (?,?,?,?,?,?,?,getDate()) " +
+		"END "
+	sqlUpdateMdYyStateTransTimeTd4 = "" +
+		"IF EXISTS(SELECT * FROM [mdyystatetranstime] WHERE [mdid]=? AND [mdyydate]=? AND [chanid] = ?) " +
+		"BEGIN " +
+		"UPDATE [mdyystatetranstime] " +
+		"SET [closeuprcv] = ?,[lastupdate]=getDate() " +
+		"WHERE [mdid] = ? " +
+		"END " +
+		"ELSE " +
+		"BEGIN " +
+		"INSERT INTO [mdyystatetranstime]([mdid],[mdyydate],[chanid],[openup],[openuprcv]," +
+		"[closeup],[closeuprcv],[lastupdate]) " +
+		"VALUES (?,?,?,?,?,?,?,getDate()) " +
+		"END "
 )
 
 type config struct {
@@ -135,7 +187,7 @@ func (c *config) UpdateHeartBeat() error {
 
 //获取通道库连接配置
 func (c *config) GetDbConfig(key object.ConnTypeKey) (*goToolMSSql.MSSqlConfig, error) {
-	log.Debug(fmt.Sprintf("获取通道库连接配置[%s]", key))
+	log.Debug(fmt.Sprintf("获取数据库连接配置[%s]", key))
 	comm := common{}
 	rows, err := comm.GetRowsBySQL(comm.GetConfigDbConfig(), sqlGetConnStrByKey, key)
 	if err != nil {
@@ -394,6 +446,49 @@ func (c *config) mdCwGsRefDelete(opr *object.OprMdCwGsRef) error {
 func (c *config) mdCwGsRefUpdate(opr *object.OprMdCwGsRef) error {
 	comm := NewCommon()
 	return comm.SetRowsBySQL(c.dbConfig, sqlMdCwGsRefUpdate, opr.GsId, opr.MdId)
+}
+
+//根据操作更新门店营业日开闭店记录传递时间
+func (c *config) UpdateMdYyStateTransTimeTd(opr *object.OprMdYyStateTransTimeTd) error {
+	comm := NewCommon()
+	switch opr.OprType {
+	case 1:
+		return comm.SetRowsBySQL(
+			c.dbConfig,
+			sqlUpdateMdYyStateTransTimeTd1,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
+			opr.OprTime, opr.MdId,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
+			opr.OprTime, comm.GetDefaultOprTime(), comm.GetDefaultOprTime(), comm.GetDefaultOprTime())
+	case 2:
+		return comm.SetRowsBySQL(
+			c.dbConfig,
+			sqlUpdateMdYyStateTransTimeTd2,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
+			opr.OprTime, opr.MdId,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
+			comm.GetDefaultOprTime(), opr.OprTime, comm.GetDefaultOprTime(), comm.GetDefaultOprTime())
+	case 3:
+		return comm.SetRowsBySQL(
+			c.dbConfig,
+			sqlUpdateMdYyStateTransTimeTd3,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
+			opr.OprTime, opr.MdId,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
+			comm.GetDefaultOprTime(), comm.GetDefaultOprTime(), opr.OprTime, comm.GetDefaultOprTime())
+	case 4:
+		return comm.SetRowsBySQL(
+			c.dbConfig,
+			sqlUpdateMdYyStateTransTimeTd4,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
+			opr.OprTime, opr.MdId,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
+			comm.GetDefaultOprTime(), comm.GetDefaultOprTime(), comm.GetDefaultOprTime(), opr.OprTime)
+	default:
+		errMsg := fmt.Sprintf("MdYyStateTransTimeTd opr type error,exp 1 or 2 or 3 or 4 got %d", opr.OprType)
+		log.Error(errMsg)
+		return errors.New(errMsg)
+	}
 }
 
 //获取财务公司设置
