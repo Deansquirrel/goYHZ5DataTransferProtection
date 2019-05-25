@@ -188,12 +188,6 @@ func (r *td) GetDataRowCount(tableName string) (int, error) {
 	return count, nil
 }
 
-//获取门店营业日开闭店记录传递时间（通道库）
-func (r *td) GetMdYyStateTransTime() (*object.MdYyStateTransTimeTd, error) {
-	//TODO 获取门店营业日开闭店记录传递时间（通道库）
-	return nil, nil
-}
-
 //获取通道库连接配置
 func (r *td) getDbConnConfig() (*goToolMSSql.MSSqlConfig, error) {
 	repConfig, err := NewConfig()

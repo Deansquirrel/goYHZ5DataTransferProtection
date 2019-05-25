@@ -81,12 +81,6 @@ func NewRepZb() (*zb, error) {
 	}, nil
 }
 
-//获取门店营业日开闭店记录恢复时间（总部库）
-func (r *zb) GetMdYyStateTransTime() (*object.MdYyStateTransTimeZb, error) {
-	//TODO 获取门店营业日开闭店记录恢复时间（总部库）
-	return nil, nil
-}
-
 //获取待恢复信道数据总量
 func (r *zb) GetWaitRestoreDataCount() (*object.WaitRestoreDataCount, error) {
 	c := common{}
