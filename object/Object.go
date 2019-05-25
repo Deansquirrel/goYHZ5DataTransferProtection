@@ -111,6 +111,22 @@ type OprCwGsSet struct {
 	OprTime time.Time //操作时间
 }
 
+//门店财务公司关系设置
+type MdCwGsRef struct {
+	MdId       int       //门店ID
+	GsId       int       //公司ID
+	LastUpdate time.Time //最后更新时间
+}
+
+//门店财务公司关系设置操作记录（触发器触发）
+type OprMdCwGsRef struct {
+	OprSn   int       //操作SN
+	MdId    int       //门店ID
+	GsId    int       //公司ID
+	OprType int       //操作类型，1-新增、2-修改、3-删除
+	OprTime time.Time //操作时间
+}
+
 //连接配置
 type ConnInfo struct {
 	TdConn string //通道库连接配置

@@ -36,6 +36,14 @@ const (
 	sqlDelMdSetOpr = "" +
 		"DELETE FROM [mdset] " +
 		"WHERE [oprsn] = ?"
+
+	sqlGetLstMdCwGsRefOpr = "" +
+		"SELECT TOP 1 [oprsn],[mdid],[gsid],[oprtype],[oprtime] " +
+		"FROM [mdcwgsref] " +
+		"ORDER BY [oprsn] ASC"
+	sqlDelMdCwGsRefOpr = "" +
+		"DELETE FROM [mdcwgsref] " +
+		"WHERE [oprsn] = ?"
 )
 
 var rppZbSyncLock sync.Mutex
@@ -241,4 +249,54 @@ func (r *zb) GetLstMdSetOpr() (*object.OprMdSet, error) {
 func (r *zb) DelMdSetOpr(sn int) error {
 	comm := NewCommon()
 	return comm.SetRowsBySQL2000(r.dbConfig, sqlDelMdSetOpr, sn)
+}
+
+//获取门店财务公司关系操作首条记录（不存在则返回nil）
+func (r *zb) GetLstMdCwGsRefOpr() (*object.OprMdCwGsRef, error) {
+	comm := NewCommon()
+	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetLstMdCwGsRefOpr)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+	rList := make([]*object.OprMdCwGsRef, 0)
+	var oprSn, mdId, gsId, oprType int
+	var oprTime time.Time
+	for rows.Next() {
+		err = rows.Scan(&oprSn, &mdId, &gsId, &oprType, &oprTime)
+		if err != nil {
+			errMsg := fmt.Sprintf("get last mdset opr err: %s", err.Error())
+			log.Error(errMsg)
+			return nil, errors.New(errMsg)
+		}
+		rList = append(rList, &object.OprMdCwGsRef{
+			OprSn:   oprSn,
+			MdId:    mdId,
+			GsId:    gsId,
+			OprType: oprType,
+			OprTime: oprTime,
+		})
+	}
+	if rows.Err() != nil {
+		errMsg := fmt.Sprintf("get last mdcwgsref opr err: %s", rows.Err().Error())
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) > 1 {
+		errMsg := fmt.Sprintf("get last mdcwgsref opr list count err: exp 1 act %d", len(rList))
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) == 0 {
+		return nil, nil
+	}
+	return rList[0], nil
+}
+
+//删除门店财务公司关系操作记录
+func (r *zb) DelMdCwGsRefOpr(sn int) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL2000(r.dbConfig, sqlDelMdCwGsRefOpr, sn)
 }

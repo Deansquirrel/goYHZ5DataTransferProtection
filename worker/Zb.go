@@ -150,6 +150,40 @@ func (w *zb) RestoreCwGsSet() {
 
 //恢复门店隶属财务公司关系设置
 func (w *zb) RestoreMdCwGsRef() {
-	//TODO 恢复门店隶属财务公司关系设置
 	log.Debug("恢复门店隶属财务公司关系设置")
+	repZb, err := repository.NewRepZb()
+	if err != nil {
+		w.errChan <- err
+		return
+	}
+	rep, err := repository.NewConfig()
+	if err != nil {
+		w.errChan <- err
+	}
+	for {
+		lstOpr, err := repZb.GetLstMdCwGsRefOpr()
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+		if lstOpr == nil {
+			return
+		}
+		if lstOpr.OprType != 1 && lstOpr.OprType != 2 && lstOpr.OprType != 3 {
+			errMsg := fmt.Sprintf("opr type err,exp 1 or 2 or 3,got %d", lstOpr.OprType)
+			log.Error(errMsg)
+			w.errChan <- errors.New(errMsg)
+			return
+		}
+		err = rep.UpdateMdCwGsRef(lstOpr)
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+		err = repZb.DelMdCwGsRefOpr(lstOpr.OprSn)
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+	}
 }

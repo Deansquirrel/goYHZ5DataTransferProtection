@@ -98,6 +98,17 @@ const (
 		"UPDATE [mdset] " +
 		"SET [mdname]=?,[mdcode]=?,[lastupdate]=getDate() " +
 		"WHERE [mdid] = ?"
+
+	sqlMdCwGsRefInsert = "" +
+		"INSERT INTO [mdcwgsref]([mdid],[gsid],[lastupdate]) " +
+		"VALUES (?,?,getDate())"
+	sqlMdCwGsRefDelete = "" +
+		"DELETE FROM [mdcwgsref] " +
+		"WHERE [mdid] = ?"
+	sqlMdCwGsRefUpdate = "" +
+		"UPDATE [mdcwgsref] " +
+		"SET [gsid]=?,[lastupdate]=getDate() " +
+		"WHERE [mdid]=?"
 )
 
 type config struct {
@@ -349,6 +360,40 @@ func (c *config) cwGsSetDelete(opr *object.OprCwGsSet) error {
 func (c *config) cwGsSetUpdate(opr *object.OprCwGsSet) error {
 	comm := NewCommon()
 	return comm.SetRowsBySQL(c.dbConfig, sqlUpdateCwGsSet, opr.GsName, opr.GsId)
+}
+
+//根据操作更新门店财务公司关系
+func (c *config) UpdateMdCwGsRef(opr *object.OprMdCwGsRef) error {
+	switch opr.OprType {
+	case 1:
+		return c.mdCwGsRefInsert(opr)
+	case 2:
+		return c.mdCwGsRefUpdate(opr)
+	case 3:
+		return c.mdCwGsRefDelete(opr)
+	default:
+		errMsg := fmt.Sprintf("mdcwgsref opr type error,exp 1 or 2 or 3 got %d", opr.OprType)
+		log.Error(errMsg)
+		return errors.New(errMsg)
+	}
+}
+
+//新增门店财务公司关系
+func (c *config) mdCwGsRefInsert(opr *object.OprMdCwGsRef) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL(c.dbConfig, sqlMdCwGsRefInsert, opr.MdId, opr.GsId)
+}
+
+//更新门店财务公司关系
+func (c *config) mdCwGsRefDelete(opr *object.OprMdCwGsRef) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL(c.dbConfig, sqlMdCwGsRefDelete, opr.MdId)
+}
+
+//删除门店财务公司关系
+func (c *config) mdCwGsRefUpdate(opr *object.OprMdCwGsRef) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL(c.dbConfig, sqlMdCwGsRefUpdate, opr.GsId, opr.MdId)
 }
 
 //获取财务公司设置
