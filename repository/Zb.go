@@ -18,6 +18,24 @@ const (
 	sqlGetChanWaitRestoreDataCount = "" +
 		"SELECT count(*) AS num,Isnull(min(TrRcvTime),'1900-01-01') AS d " +
 		"FROM TfRcv%d"
+
+	sqlGetLstCwGsSetOpr = "" +
+		"SELECT TOP 1 [oprsn],[gsid],[gsname],[oprtype],[oprtime] " +
+		"FROM [cwgsset] " +
+		"ORDER BY [oprsn] ASC"
+
+	sqlDelCwGsSetOpr = "" +
+		"DELETE FROM [cwgsset] " +
+		"WHERE [oprsn] = ?"
+
+	sqlGetLstMdSetOpr = "" +
+		"SELECT TOP 1 [oprsn] ,[mdid],[mdname],[mdcode],[oprtype],[oprtime] " +
+		"FROM [mdset] " +
+		"ORDER BY [oprsn] ASC"
+
+	sqlDelMdSetOpr = "" +
+		"DELETE FROM [mdset] " +
+		"WHERE [oprsn] = ?"
 )
 
 var rppZbSyncLock sync.Mutex
@@ -123,14 +141,104 @@ func (r *zb) getBatchNo() string {
 
 //获取财务公司设置操作首条记录（不存在则返回nil）
 func (r *zb) GetLstCwGsSetOpr() (*object.OprCwGsSet, error) {
-	//TODO 获取财务公司设置操作首条记录（不存在则返回nil）
-	log.Debug("获取财务公司设置操作首条记录（不存在则返回nil）")
-	return nil, nil
+	comm := NewCommon()
+	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetLstCwGsSetOpr)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	rList := make([]*object.OprCwGsSet, 0)
+	var oprSn, gsId, oprType int
+	var gsName string
+	var oprTime time.Time
+	for rows.Next() {
+		err = rows.Scan(&oprSn, &gsId, &gsName, &oprType, &oprTime)
+		if err != nil {
+			errMsg := fmt.Sprintf("get last cwgsset opr err: %s", err.Error())
+			log.Error(errMsg)
+			return nil, errors.New(errMsg)
+		}
+		rList = append(rList, &object.OprCwGsSet{
+			OprSn:   oprSn,
+			GsId:    gsId,
+			GsName:  gsName,
+			OprType: oprType,
+			OprTime: oprTime,
+		})
+	}
+	if rows.Err() != nil {
+		errMsg := fmt.Sprintf("get last cwgsset opr err: %s", rows.Err().Error())
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) > 1 {
+		errMsg := fmt.Sprintf("get last cwgsset opr list count err: exp 1 act %d", len(rList))
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) == 0 {
+		return nil, nil
+	}
+	return rList[0], nil
 }
 
 //删除财务公司设置操作记录
 func (r *zb) DelCwGsSetOpr(sn int) error {
-	//TODO 删除财务公司设置操作记录
-	log.Debug("删除财务公司设置操作记录")
-	return nil
+	comm := NewCommon()
+	return comm.SetRowsBySQL2000(r.dbConfig, sqlDelCwGsSetOpr, sn)
+}
+
+//获取门店设置操作首条记录（不存在则返回nil）
+func (r *zb) GetLstMdSetOpr() (*object.OprMdSet, error) {
+	comm := NewCommon()
+	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetLstMdSetOpr)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+	rList := make([]*object.OprMdSet, 0)
+	var oprSn, mdId, oprType int
+	var mdName, mdCode string
+	var oprTime time.Time
+	for rows.Next() {
+		err = rows.Scan(&oprSn, &mdId, &mdName, &mdCode, &oprType, &oprTime)
+		if err != nil {
+			errMsg := fmt.Sprintf("get last mdset opr err: %s", err.Error())
+			log.Error(errMsg)
+			return nil, errors.New(errMsg)
+		}
+		rList = append(rList, &object.OprMdSet{
+			OprSn:   oprSn,
+			MdId:    mdId,
+			MdName:  mdName,
+			MdCode:  mdCode,
+			OprType: oprType,
+			OprTime: oprTime,
+		})
+	}
+	if rows.Err() != nil {
+		errMsg := fmt.Sprintf("get last mdset opr err: %s", rows.Err().Error())
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) > 1 {
+		errMsg := fmt.Sprintf("get last mdset opr list count err: exp 1 act %d", len(rList))
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) == 0 {
+		return nil, nil
+	}
+	return rList[0], nil
+}
+
+//删除门店设置操作记录
+func (r *zb) DelMdSetOpr(sn int) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL2000(r.dbConfig, sqlDelMdSetOpr, sn)
 }

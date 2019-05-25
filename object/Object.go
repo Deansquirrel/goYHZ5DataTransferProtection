@@ -76,9 +76,35 @@ type WaitRestoreDataCount struct {
 	RecordDate   time.Time //记录时间
 }
 
+//门店设置
+type MdSet struct {
+	MdId        int       //门店ID
+	MdName      string    //门店名称
+	MdCode      string    //门店通道码
+	IsForbidden int       //是否禁用（0-在用，1-禁用）
+	LastUpdate  time.Time //最后更新时间
+}
+
+//门店设置操作记录（触发器触发）
+type OprMdSet struct {
+	OprSn   int       //操作SN
+	MdId    int       //门店ID
+	MdName  string    //门店名称
+	MdCode  string    //门店通道码
+	OprType int       //操作类型，1-新增（启用）、2-修改、3-删除
+	OprTime time.Time //操作时间
+}
+
+//财务公司设置
+type CwGsSet struct {
+	GsId       int       //公司ID
+	GsName     string    //公司名称
+	LastUpdate time.Time //最后更新时间
+}
+
 //财务公司设置操作记录（触发器触发）
 type OprCwGsSet struct {
-	Sn      int       //操作SN
+	OprSn   int       //操作SN
 	GsId    int       //公司ID
 	GsName  string    //公司名称
 	OprType int       //操作类型，1-新增（启用）、2-修改、3-删除

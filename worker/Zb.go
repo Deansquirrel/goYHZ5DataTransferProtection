@@ -5,10 +5,7 @@ import (
 	"fmt"
 	log "github.com/Deansquirrel/goToolLog"
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/repository"
-	"sync"
 )
-
-var syncRestoreCwGsSet sync.Mutex
 
 type zb struct {
 	errChan chan<- error
@@ -73,15 +70,47 @@ func (w *zb) RestoreMdYyState() {
 
 //恢复门店设置
 func (w *zb) RestoreMdSet() {
-	//TODO 恢复门店设置
 	log.Debug("恢复门店设置")
+	repZb, err := repository.NewRepZb()
+	if err != nil {
+		w.errChan <- err
+		return
+	}
+	rep, err := repository.NewConfig()
+	if err != nil {
+		w.errChan <- err
+	}
+	for {
+		lstOpr, err := repZb.GetLstMdSetOpr()
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+		if lstOpr == nil {
+			return
+		}
+		if lstOpr.OprType != 1 && lstOpr.OprType != 2 && lstOpr.OprType != 3 {
+			errMsg := fmt.Sprintf("opr type err,exp 1 or 2 or 3,got %d", lstOpr.OprType)
+			log.Error(errMsg)
+			w.errChan <- errors.New(errMsg)
+			return
+		}
+		err = rep.UpdateMdSet(lstOpr)
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+		err = repZb.DelMdSetOpr(lstOpr.OprSn)
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+	}
 }
 
 //恢复财务公司设置
 func (w *zb) RestoreCwGsSet() {
 	log.Debug("恢复财务公司设置")
-	syncRestoreCwGsSet.Lock()
-	defer syncRestoreCwGsSet.Unlock()
 	repZb, err := repository.NewRepZb()
 	if err != nil {
 		w.errChan <- err
@@ -111,7 +140,7 @@ func (w *zb) RestoreCwGsSet() {
 			w.errChan <- err
 			return
 		}
-		err = repZb.DelCwGsSetOpr(lstOpr.Sn)
+		err = repZb.DelCwGsSetOpr(lstOpr.OprSn)
 		if err != nil {
 			w.errChan <- err
 			return

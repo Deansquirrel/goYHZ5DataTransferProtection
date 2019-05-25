@@ -67,6 +67,37 @@ const (
 	sqlInsertCwGsSet = "" +
 		"INSERT INTO [cwgsset]([gsid],[gsname],[lastupdate]) " +
 		"VALUES (?,?,GETDATE())"
+	sqlUpdateCwGsSet = "" +
+		"UPDATE [cwgsset] " +
+		"SET [gsname] = ?,[lastupdate]=getdate() " +
+		"WHERE [gsid] = ?"
+	sqlDeleteCwGsSet = "" +
+		"DELETE FROM [cwgsset] " +
+		"WHERE [gsid] = ?"
+	sqlGetCwGsSet = "" +
+		"SELECT [gsid],[gsname],[lastupdate] " +
+		"FROM [cwgsset]"
+
+	sqlMdSetInsert = "" +
+		"IF EXISTS(SELECT * FROM [mdset] WHERE [mdid] = ?) " +
+		"BEGIN	" +
+		"UPDATE [mdset] " +
+		"SET [isforbidden] = 0,[lastupdate]=getDate() " +
+		"WHERE [mdid] = ? " +
+		"END " +
+		"ELSE " +
+		"BEGIN " +
+		"INSERT INTO [mdset]([mdid],[mdname],[mdcode],[isforbidden],[lastupdate]) " +
+		"VALUES (?,?,?,0,getDate()) " +
+		"END"
+	sqlMdSetDelete = "" +
+		"UPDATE [mdset] " +
+		"SET [isforbidden] = 1,[lastupdate]=getDate() " +
+		"WHERE [mdid] = ?"
+	sqlMdSetUpdate = "" +
+		"UPDATE [mdset] " +
+		"SET [mdname]=?,[mdcode]=?,[lastupdate]=getDate() " +
+		"WHERE [mdid] = ?"
 )
 
 type config struct {
@@ -252,6 +283,40 @@ func (c *config) UpdateMdDataTransState(batchNo string, mdCode string, chanId in
 	return comm.SetRowsBySQL(c.dbConfig, sqlUpdateMdDataTransState, rowCount, batchNo, mdCode, chanId)
 }
 
+//根据操作更新门店设置
+func (c *config) UpdateMdSet(opr *object.OprMdSet) error {
+	switch opr.OprType {
+	case 1:
+		return c.mdSetInsert(opr)
+	case 2:
+		return c.mdSetUpdate(opr)
+	case 3:
+		return c.mdSetDelete(opr)
+	default:
+		errMsg := fmt.Sprintf("md set opr type error,exp 1 or 2 or 3 got %d", opr.OprType)
+		log.Error(errMsg)
+		return errors.New(errMsg)
+	}
+}
+
+//新增门店设置
+func (c *config) mdSetInsert(opr *object.OprMdSet) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL(c.dbConfig, sqlMdSetInsert, opr.MdId, opr.MdId, opr.MdId, opr.MdName, opr.MdCode)
+}
+
+//更新门店设置
+func (c *config) mdSetDelete(opr *object.OprMdSet) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL(c.dbConfig, sqlMdSetDelete, opr.MdId)
+}
+
+//删除门店设置
+func (c *config) mdSetUpdate(opr *object.OprMdSet) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL(c.dbConfig, sqlMdSetUpdate, opr.MdName, opr.MdCode, opr.MdId)
+}
+
 //根据操作更新财务公司设置
 func (c *config) UpdateCwGsSet(opr *object.OprCwGsSet) error {
 	switch opr.OprType {
@@ -276,12 +341,47 @@ func (c *config) cwGsSetInsert(opr *object.OprCwGsSet) error {
 
 //更新财务公司设置
 func (c *config) cwGsSetDelete(opr *object.OprCwGsSet) error {
-	//TODO 更新财务公司设置
-	return nil
+	comm := NewCommon()
+	return comm.SetRowsBySQL(c.dbConfig, sqlDeleteCwGsSet, opr.GsId)
 }
 
 //删除财务公司设置
 func (c *config) cwGsSetUpdate(opr *object.OprCwGsSet) error {
-	//TODO 删除财务公司设置
-	return nil
+	comm := NewCommon()
+	return comm.SetRowsBySQL(c.dbConfig, sqlUpdateCwGsSet, opr.GsName, opr.GsId)
+}
+
+//获取财务公司设置
+func (c *config) GetCwGsSet() ([]*object.CwGsSet, error) {
+	comm := common{}
+	rows, err := comm.GetRowsBySQL(c.dbConfig, sqlGetCwGsSet)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+	rList := make([]*object.CwGsSet, 0)
+	var gsId int
+	var gsName string
+	var lastUpdate time.Time
+	for rows.Next() {
+		err = rows.Scan(&gsId, &gsName, &lastUpdate)
+		if err != nil {
+			errMsg := fmt.Sprintf("get cwgsset read data err: %s", err.Error())
+			log.Error(errMsg)
+			return nil, errors.New(errMsg)
+		}
+		rList = append(rList, &object.CwGsSet{
+			GsId:       gsId,
+			GsName:     gsName,
+			LastUpdate: lastUpdate,
+		})
+	}
+	if rows.Err() != nil {
+		errMsg := fmt.Sprintf("get cwgsset read data err: %s", rows.Err().Error())
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	return rList, nil
 }
