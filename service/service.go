@@ -18,17 +18,26 @@ import (
 //启动服务内容
 func StartService() error {
 	log.Debug("StartService")
-	startHeartBeat()
-	startRefreshMdDataTransState()
-	startRestoreMdYyStateTransTime()
-	startRefreshWaitRestoreDataCount()
-	startRestoreMdYyStateRestoreTime()
-	startRestoreMdYyState()
-	startRestoreMdSet()
-	startRestoreCwGsSet()
-	startRestoreMdCwGsRef()
 
-	//Test
+	//主任务
+	{
+		startHeartBeat()
+		startRefreshMdDataTransState()
+		startRestoreMdYyStateTransTime()
+		startRefreshWaitRestoreDataCount()
+		startRestoreMdYyStateRestoreTime()
+		startRestoreMdYyState()
+		startRestoreMdSet()
+		startRestoreCwGsSet()
+		startRestoreMdCwGsRef()
+	}
+
+	//辅助任务
+	{
+		startRefreshConfig()
+	}
+
+	//Test 显示任务运行情况
 	{
 		go func() {
 			c := cron.New()
@@ -75,6 +84,13 @@ func testPrintS(ts *object.TaskState) {
 				goToolCommon.GetDateTimeStr(e.Next)))
 		}
 	}
+}
+
+//刷新配置
+func startRefreshConfig() {
+	ch := make(chan error)
+	comm := worker.NewCommon(ch)
+	startWorker(object.TaskKeyRefreshConfig, comm.RefreshConfig, ch)
 }
 
 //Common（心跳）

@@ -65,6 +65,18 @@ type MdYyState struct {
 	LastUpdate    time.Time //最后更新时间
 }
 
+//门店营业日开闭店记录（总部库）（触发器触发）
+type OprMdYyState struct {
+	OprSn         int       //操作顺序号
+	MdId          int       //门店ID
+	MdYyDate      string    //门店营业日
+	MdYyOpenTime  time.Time //开店时间
+	MdYyCloseTime time.Time //闭店时间
+	MdYySjType    int       //数据完成标识
+	OprType       int       //操作类型，1-新增、2-更新
+	OprTime       time.Time //操作时间
+}
+
 //待恢复信道数据总量（总部库）
 type WaitRestoreDataCount struct {
 	BatchNo      string    //操作批次号

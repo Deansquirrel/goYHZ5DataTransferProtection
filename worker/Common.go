@@ -28,3 +28,9 @@ func (c *common) RefreshHeartBeat() {
 		c.errChan <- err
 	}
 }
+
+//刷新配置
+func (c *common) RefreshConfig() {
+	//TODO 配置刷新（任务的执行需支持停止，含线程的停止）
+	log.Debug("配置刷新（任务的执行需支持停止，含线程的停止）")
+}

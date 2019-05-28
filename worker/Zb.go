@@ -64,8 +64,42 @@ func (w *zb) RestoreMdYyStateRestoreTime() {
 
 //恢复门店营业日开闭店记录
 func (w *zb) RestoreMdYyState() {
-	// TODO 恢复门店营业日开闭店记录
 	log.Debug("恢复门店营业日开闭店记录")
+	repZb, err := repository.NewRepZb()
+	if err != nil {
+		w.errChan <- err
+		return
+	}
+	rep, err := repository.NewConfig()
+	if err != nil {
+		w.errChan <- err
+	}
+	for {
+		lstOpr, err := repZb.GetLstMdYyStateOpr()
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+		if lstOpr == nil {
+			return
+		}
+		if lstOpr.OprType != 1 && lstOpr.OprType != 2 {
+			errMsg := fmt.Sprintf("opr type err,exp 1 or 2 ,got %d", lstOpr.OprType)
+			log.Error(errMsg)
+			w.errChan <- errors.New(errMsg)
+			return
+		}
+		err = rep.UpdateMdYyState(lstOpr)
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+		err = repZb.DelMdYyStateOpr(lstOpr.OprSn)
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+	}
 }
 
 //恢复门店设置

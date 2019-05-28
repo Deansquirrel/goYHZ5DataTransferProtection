@@ -4,6 +4,7 @@ type TaskKey string
 
 //任务Key
 const (
+	//主任务
 	TaskKeyHeartBeat                   TaskKey = "HeartBeat"
 	TaskKeyRefreshMdDataTransState     TaskKey = "RefreshMdDataTransState"
 	TaskKeyRestoreMdYyStateTransTime   TaskKey = "RestoreMdYyStateTransTime"
@@ -13,6 +14,9 @@ const (
 	TaskKeyRestoreMdSet                TaskKey = "RestoreMdSet"
 	TaskKeyRestoreCwGsSet              TaskKey = "RestoreCwGsSet"
 	TaskKeyRestoreMdCwGsRef            TaskKey = "RestoreMdCwGsRef"
+
+	//辅助任务
+	TaskKeyRefreshConfig TaskKey = "RefreshConfig"
 )
 
 //数据库连接类型key

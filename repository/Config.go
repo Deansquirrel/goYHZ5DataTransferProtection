@@ -114,7 +114,7 @@ const (
 		"BEGIN " +
 		"UPDATE [mdyystatetranstime] " +
 		"SET [openup] = ?,[lastupdate]=getDate() " +
-		"WHERE [mdid] = ? " +
+		"WHERE [mdid]=? AND [mdyydate]=? AND [chanid] = ? " +
 		"END " +
 		"ELSE " +
 		"BEGIN " +
@@ -127,7 +127,7 @@ const (
 		"BEGIN " +
 		"UPDATE [mdyystatetranstime] " +
 		"SET [openuprcv] = ?,[lastupdate]=getDate() " +
-		"WHERE [mdid] = ? " +
+		"WHERE [mdid]=? AND [mdyydate]=? AND [chanid] = ? " +
 		"END " +
 		"ELSE " +
 		"BEGIN " +
@@ -140,7 +140,7 @@ const (
 		"BEGIN " +
 		"UPDATE [mdyystatetranstime] " +
 		"SET [closeup] = ?,[lastupdate]=getDate() " +
-		"WHERE [mdid] = ? " +
+		"WHERE [mdid]=? AND [mdyydate]=? AND [chanid] = ? " +
 		"END " +
 		"ELSE " +
 		"BEGIN " +
@@ -153,13 +153,25 @@ const (
 		"BEGIN " +
 		"UPDATE [mdyystatetranstime] " +
 		"SET [closeuprcv] = ?,[lastupdate]=getDate() " +
-		"WHERE [mdid] = ? " +
+		"WHERE [mdid]=? AND [mdyydate]=? AND [chanid] = ? " +
 		"END " +
 		"ELSE " +
 		"BEGIN " +
 		"INSERT INTO [mdyystatetranstime]([mdid],[mdyydate],[chanid],[openup],[openuprcv]," +
 		"[closeup],[closeuprcv],[lastupdate]) " +
 		"VALUES (?,?,?,?,?,?,?,getDate()) " +
+		"END "
+	sqlUpdateMdYyState = "" +
+		"IF EXISTS(SELECT * FROM [mdyystate] WHERE [mdid]=? AND [mdyydate]=?) " +
+		"BEGIN " +
+		"UPDATE [mdyystate] " +
+		"SET [mdyyopentime] = ?,[mdyyclosetime] = ?,[mdyysjtype] = ?,[lastupdate]=getDate() " +
+		"WHERE [mdid]=? AND [mdyydate]=? " +
+		"END " +
+		"ELSE " +
+		"BEGIN " +
+		"INSERT INTO [mdyystate]([mdid],[mdyydate],[mdyyopentime],[mdyyclosetime],[mdyysjtype],[lastupdate]) " +
+		"VALUES (?,?,?,?,?,getDate()) " +
 		"END "
 )
 
@@ -457,7 +469,8 @@ func (c *config) UpdateMdYyStateTransTimeTd(opr *object.OprMdYyStateTransTimeTd)
 			c.dbConfig,
 			sqlUpdateMdYyStateTransTimeTd1,
 			opr.MdId, opr.MdYyDate, opr.ChanId,
-			opr.OprTime, opr.MdId,
+			opr.OprTime,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
 			opr.MdId, opr.MdYyDate, opr.ChanId,
 			opr.OprTime, comm.GetDefaultOprTime(), comm.GetDefaultOprTime(), comm.GetDefaultOprTime())
 	case 2:
@@ -465,7 +478,8 @@ func (c *config) UpdateMdYyStateTransTimeTd(opr *object.OprMdYyStateTransTimeTd)
 			c.dbConfig,
 			sqlUpdateMdYyStateTransTimeTd2,
 			opr.MdId, opr.MdYyDate, opr.ChanId,
-			opr.OprTime, opr.MdId,
+			opr.OprTime,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
 			opr.MdId, opr.MdYyDate, opr.ChanId,
 			comm.GetDefaultOprTime(), opr.OprTime, comm.GetDefaultOprTime(), comm.GetDefaultOprTime())
 	case 3:
@@ -473,7 +487,8 @@ func (c *config) UpdateMdYyStateTransTimeTd(opr *object.OprMdYyStateTransTimeTd)
 			c.dbConfig,
 			sqlUpdateMdYyStateTransTimeTd3,
 			opr.MdId, opr.MdYyDate, opr.ChanId,
-			opr.OprTime, opr.MdId,
+			opr.OprTime,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
 			opr.MdId, opr.MdYyDate, opr.ChanId,
 			comm.GetDefaultOprTime(), comm.GetDefaultOprTime(), opr.OprTime, comm.GetDefaultOprTime())
 	case 4:
@@ -481,7 +496,8 @@ func (c *config) UpdateMdYyStateTransTimeTd(opr *object.OprMdYyStateTransTimeTd)
 			c.dbConfig,
 			sqlUpdateMdYyStateTransTimeTd4,
 			opr.MdId, opr.MdYyDate, opr.ChanId,
-			opr.OprTime, opr.MdId,
+			opr.OprTime,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
 			opr.MdId, opr.MdYyDate, opr.ChanId,
 			comm.GetDefaultOprTime(), comm.GetDefaultOprTime(), comm.GetDefaultOprTime(), opr.OprTime)
 	default:
@@ -489,6 +505,18 @@ func (c *config) UpdateMdYyStateTransTimeTd(opr *object.OprMdYyStateTransTimeTd)
 		log.Error(errMsg)
 		return errors.New(errMsg)
 	}
+}
+
+//根据操作更新门店营业日开闭店操作
+func (c *config) UpdateMdYyState(opr *object.OprMdYyState) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL(
+		c.dbConfig,
+		sqlUpdateMdYyState,
+		opr.MdId, opr.MdYyDate,
+		opr.MdYyOpenTime, opr.MdYyCloseTime, opr.MdYySjType,
+		opr.MdId, opr.MdYyDate,
+		opr.MdId, opr.MdYyDate, opr.MdYyOpenTime, opr.MdYyCloseTime, opr.MdYySjType)
 }
 
 //获取财务公司设置

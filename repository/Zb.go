@@ -44,6 +44,15 @@ const (
 	sqlDelMdCwGsRefOpr = "" +
 		"DELETE FROM [mdcwgsref] " +
 		"WHERE [oprsn] = ?"
+
+	sqlGetLstMdYyStateOpr = "" +
+		"SELECT TOP 1 [oprsn],[mdid],[mdyydate],[mdyyopentime],[mdyyclosetime]," +
+		"[mdyysjtype],[oprtype],[oprtime] " +
+		"FROM [mdyystate]" +
+		"ORDER BY [oprsn] ASC"
+	sqlDelMdYyStateOpr = "" +
+		"DELETE FROM [mdyystate] " +
+		"WHERE [oprsn] = ?"
 )
 
 var rppZbSyncLock sync.Mutex
@@ -293,4 +302,58 @@ func (r *zb) GetLstMdCwGsRefOpr() (*object.OprMdCwGsRef, error) {
 func (r *zb) DelMdCwGsRefOpr(sn int) error {
 	comm := NewCommon()
 	return comm.SetRowsBySQL2000(r.dbConfig, sqlDelMdCwGsRefOpr, sn)
+}
+
+//获取门店营业日开闭店操作首条记录（不存在则返回nil）
+func (r *zb) GetLstMdYyStateOpr() (*object.OprMdYyState, error) {
+	comm := NewCommon()
+	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetLstMdYyStateOpr)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+	rList := make([]*object.OprMdYyState, 0)
+	var oprSn, mdId, mdYySjType, oprType int
+	var mdYyDate string
+	var mdYyOpenTime, mdYyCloseTime, oprTime time.Time
+	for rows.Next() {
+		err = rows.Scan(&oprSn, &mdId, &mdYyDate, &mdYyOpenTime, &mdYyCloseTime, &mdYySjType, &oprType, &oprTime)
+		if err != nil {
+			errMsg := fmt.Sprintf("get last mdset opr err: %s", err.Error())
+			log.Error(errMsg)
+			return nil, errors.New(errMsg)
+		}
+		rList = append(rList, &object.OprMdYyState{
+			OprSn:         oprSn,
+			MdId:          mdId,
+			MdYyDate:      mdYyDate,
+			MdYyOpenTime:  mdYyOpenTime,
+			MdYyCloseTime: mdYyCloseTime,
+			MdYySjType:    mdYySjType,
+			OprType:       oprType,
+			OprTime:       oprTime,
+		})
+	}
+	if rows.Err() != nil {
+		errMsg := fmt.Sprintf("get last mdcwgsref opr err: %s", rows.Err().Error())
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) > 1 {
+		errMsg := fmt.Sprintf("get last mdcwgsref opr list count err: exp 1 act %d", len(rList))
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) == 0 {
+		return nil, nil
+	}
+	return rList[0], nil
+}
+
+//删除门店营业日开闭店操作记录
+func (r *zb) DelMdYyStateOpr(sn int) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL2000(r.dbConfig, sqlDelMdYyStateOpr, sn)
 }
