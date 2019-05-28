@@ -54,9 +54,11 @@ func (w *td) RefreshMdDataTransState() {
 			err = rep.UpdateMdDataTransState(cd.BatchNo, cd.MdCode, cd.ChanId, rowCount)
 			if err != nil {
 				w.errChan <- err
+				return
 			}
 		}()
 	}
+	w.errChan <- nil
 }
 
 //恢复门店营业日开闭店记录传递时间
@@ -78,6 +80,7 @@ func (w *td) RestoreMdYyStateTransTime() {
 			return
 		}
 		if lstOpr == nil {
+			w.errChan <- nil
 			return
 		}
 		if lstOpr.OprType != 1 && lstOpr.OprType != 2 && lstOpr.OprType != 3 {

@@ -58,8 +58,43 @@ func (w *zb) RefreshWaitRestoreDataCount() {
 
 //恢复门店营业日开闭店记录恢复时间
 func (w *zb) RestoreMdYyStateRestoreTime() {
-	// TODO 恢复门店营业日开闭店记录恢复时间
 	log.Debug("恢复门店营业日开闭店记录恢复时间")
+	repZb, err := repository.NewRepZb()
+	if err != nil {
+		w.errChan <- err
+		return
+	}
+	rep, err := repository.NewConfig()
+	if err != nil {
+		w.errChan <- err
+	}
+	for {
+		lstOpr, err := repZb.GetLstMdYyStateRestoreTimeOpr()
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+		if lstOpr == nil {
+			w.errChan <- nil
+			return
+		}
+		if lstOpr.OprType != 1 && lstOpr.OprType != 2 {
+			errMsg := fmt.Sprintf("opr type err,exp 1 or 2 ,got %d", lstOpr.OprType)
+			log.Error(errMsg)
+			w.errChan <- errors.New(errMsg)
+			return
+		}
+		err = rep.UpdateMdYyStateRestoreTime(lstOpr)
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+		err = repZb.DelMdYyStateRestoreTimeOpr(lstOpr.OprSn)
+		if err != nil {
+			w.errChan <- err
+			return
+		}
+	}
 }
 
 //恢复门店营业日开闭店记录
@@ -81,6 +116,7 @@ func (w *zb) RestoreMdYyState() {
 			return
 		}
 		if lstOpr == nil {
+			w.errChan <- nil
 			return
 		}
 		if lstOpr.OprType != 1 && lstOpr.OprType != 2 {
@@ -121,6 +157,7 @@ func (w *zb) RestoreMdSet() {
 			return
 		}
 		if lstOpr == nil {
+			w.errChan <- nil
 			return
 		}
 		if lstOpr.OprType != 1 && lstOpr.OprType != 2 && lstOpr.OprType != 3 {
@@ -161,6 +198,7 @@ func (w *zb) RestoreCwGsSet() {
 			return
 		}
 		if lstOpr == nil {
+			w.errChan <- nil
 			return
 		}
 		if lstOpr.OprType != 1 && lstOpr.OprType != 2 && lstOpr.OprType != 3 {
@@ -201,6 +239,7 @@ func (w *zb) RestoreMdCwGsRef() {
 			return
 		}
 		if lstOpr == nil {
+			w.errChan <- nil
 			return
 		}
 		if lstOpr.OprType != 1 && lstOpr.OprType != 2 && lstOpr.OprType != 3 {

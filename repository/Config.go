@@ -173,6 +173,31 @@ const (
 		"INSERT INTO [mdyystate]([mdid],[mdyydate],[mdyyopentime],[mdyyclosetime],[mdyysjtype],[lastupdate]) " +
 		"VALUES (?,?,?,?,?,getDate()) " +
 		"END "
+
+	sqlUpdateMdYyStateRestoreTime1 = "" +
+		"IF EXISTS(SELECT * FROM [mdyystaterestoretime] WHERE [mdid]=? AND [mdyydate]=? AND [chanid]=?)  " +
+		"BEGIN  " +
+		"UPDATE [mdyystaterestoretime]  " +
+		"SET [openuprcvr] = ?,[lastupdate]=getDate()  " +
+		"WHERE [mdid]=? AND [mdyydate]=? AND [chanid]=? " +
+		"END  " +
+		"ELSE  " +
+		"BEGIN  " +
+		"INSERT INTO [mdyystaterestoretime]([mdid],[mdyydate],[chanid],[openuprcvr],[closeuprcvr],[lastupdate])  " +
+		"VALUES (?,?,?,?,?,getDate())  " +
+		"END "
+	sqlUpdateMdYyStateRestoreTime2 = "" +
+		"IF EXISTS(SELECT * FROM [mdyystaterestoretime] WHERE [mdid]=? AND [mdyydate]=? AND [chanid]=?)  " +
+		"BEGIN  " +
+		"UPDATE [mdyystaterestoretime]  " +
+		"SET [closeuprcvr] = ?,[lastupdate]=getDate()  " +
+		"WHERE [mdid]=? AND [mdyydate]=? AND [chanid]=? " +
+		"END  " +
+		"ELSE  " +
+		"BEGIN  " +
+		"INSERT INTO [mdyystaterestoretime]([mdid],[mdyydate],[chanid],[openuprcvr],[closeuprcvr],[lastupdate])  " +
+		"VALUES (?,?,?,?,?,getDate())  " +
+		"END "
 )
 
 type config struct {
@@ -502,6 +527,33 @@ func (c *config) UpdateMdYyStateTransTimeTd(opr *object.OprMdYyStateTransTimeTd)
 			comm.GetDefaultOprTime(), comm.GetDefaultOprTime(), comm.GetDefaultOprTime(), opr.OprTime)
 	default:
 		errMsg := fmt.Sprintf("MdYyStateTransTimeTd opr type error,exp 1 or 2 or 3 or 4 got %d", opr.OprType)
+		log.Error(errMsg)
+		return errors.New(errMsg)
+	}
+}
+
+//根据操作更新门店营业日开闭店操作
+func (c *config) UpdateMdYyStateRestoreTime(opr *object.OprMdYyStateRestoreTimeZb) error {
+	comm := NewCommon()
+	switch opr.OprType {
+	case 1:
+		return comm.SetRowsBySQL(
+			c.dbConfig,
+			sqlUpdateMdYyStateRestoreTime1,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
+			opr.OprTime,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
+			opr.MdId, opr.MdYyDate, opr.ChanId, opr.OprTime, comm.GetDefaultOprTime())
+	case 2:
+		return comm.SetRowsBySQL(
+			c.dbConfig,
+			sqlUpdateMdYyStateRestoreTime2,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
+			opr.OprTime,
+			opr.MdId, opr.MdYyDate, opr.ChanId,
+			opr.MdId, opr.MdYyDate, opr.ChanId, comm.GetDefaultOprTime(), opr.OprTime)
+	default:
+		errMsg := fmt.Sprintf("OprMdYyStateRestoreTimeZb opr type error,exp 1 or 2 got %d", opr.OprType)
 		log.Error(errMsg)
 		return errors.New(errMsg)
 	}

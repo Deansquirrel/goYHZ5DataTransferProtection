@@ -1,40 +1,58 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/Deansquirrel/goToolCommon"
 	log "github.com/Deansquirrel/goToolLog"
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/global"
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/object"
-	rep "github.com/Deansquirrel/goYHZ5DataTransferProtection/repository"
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/worker"
-	"github.com/kataras/iris/core/errors"
 	"github.com/robfig/cron"
 	"sort"
-	"strings"
+)
+
+const (
+	//TODO 待参数化
+	webHook = "3dd601535aa95027b92e78b8a820ba62be5069293092a302d8c17ef63e095cac"
 )
 
 //启动服务内容
 func StartService() error {
 	log.Debug("StartService")
 
+	ch := make(chan error)
+	commWorker := worker.NewCommon(ch)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		for {
+			select {
+			case err := <-ch:
+				if err != nil {
+					log.Debug(err.Error())
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 	//主任务
 	{
-		startHeartBeat()
-		startRefreshMdDataTransState()
-		startRestoreMdYyStateTransTime()
-		startRefreshWaitRestoreDataCount()
-		startRestoreMdYyStateRestoreTime()
-		startRestoreMdYyState()
-		startRestoreMdSet()
-		startRestoreCwGsSet()
-		startRestoreMdCwGsRef()
+		commWorker.StartService(object.TaskKeyHeartBeat, errHandle)
+		commWorker.StartService(object.TaskKeyRefreshMdDataTransState, errHandle)
+		commWorker.StartService(object.TaskKeyRestoreMdYyStateTransTime, errHandle)
+		commWorker.StartService(object.TaskKeyRefreshWaitRestoreDataCount, errHandle)
+		commWorker.StartService(object.TaskKeyRestoreMdYyStateRestoreTime, errHandle)
+		commWorker.StartService(object.TaskKeyRestoreMdYyState, errHandle)
+		commWorker.StartService(object.TaskKeyRestoreMdSet, errHandle)
+		commWorker.StartService(object.TaskKeyRestoreCwGsSet, errHandle)
+		commWorker.StartService(object.TaskKeyRestoreMdCwGsRef, errHandle)
 	}
 
 	//辅助任务
 	{
-		startRefreshConfig()
+		commWorker.StartService(object.TaskKeyRefreshConfig, errHandle)
 	}
 
 	//Test 显示任务运行情况
@@ -49,7 +67,7 @@ func StartService() error {
 			}
 		}()
 	}
-
+	cancel()
 	return nil
 }
 
@@ -86,135 +104,25 @@ func testPrintS(ts *object.TaskState) {
 	}
 }
 
-//刷新配置
-func startRefreshConfig() {
-	ch := make(chan error)
-	comm := worker.NewCommon(ch)
-	startWorker(object.TaskKeyRefreshConfig, comm.RefreshConfig, ch)
-}
-
-//Common（心跳）
-func startHeartBeat() {
-	ch := make(chan error)
-	comm := worker.NewCommon(ch)
-	startWorker(object.TaskKeyHeartBeat, comm.RefreshHeartBeat, ch)
-}
-
-//通道
-func startRefreshMdDataTransState() {
-	ch := make(chan error)
-	workerTd := worker.NewWorkerTd(ch)
-	startWorker(object.TaskKeyRefreshMdDataTransState, workerTd.RefreshMdDataTransState, ch)
-}
-
-//通道
-func startRestoreMdYyStateTransTime() {
-	ch := make(chan error)
-	workerTd := worker.NewWorkerTd(ch)
-	startWorker(object.TaskKeyRestoreMdYyStateTransTime, workerTd.RestoreMdYyStateTransTime, ch)
-}
-
-//总部库
-func startRefreshWaitRestoreDataCount() {
-	ch := make(chan error)
-	w := worker.NewWorkerZb(ch)
-	startWorker(object.TaskKeyRefreshWaitRestoreDataCount, w.RefreshWaitRestoreDataCount, ch)
-}
-
-//总部库
-func startRestoreMdYyStateRestoreTime() {
-	ch := make(chan error)
-	w := worker.NewWorkerZb(ch)
-	startWorker(object.TaskKeyRestoreMdYyStateRestoreTime, w.RestoreMdYyStateRestoreTime, ch)
-}
-
-//总部库
-func startRestoreMdYyState() {
-	ch := make(chan error)
-	w := worker.NewWorkerZb(ch)
-	startWorker(object.TaskKeyRestoreMdYyState, w.RestoreMdYyState, ch)
-}
-
-//总部库
-func startRestoreMdSet() {
-	ch := make(chan error)
-	w := worker.NewWorkerZb(ch)
-	startWorker(object.TaskKeyRestoreMdSet, w.RestoreMdSet, ch)
-}
-
-//总部库
-func startRestoreCwGsSet() {
-	ch := make(chan error)
-	w := worker.NewWorkerZb(ch)
-	startWorker(object.TaskKeyRestoreCwGsSet, w.RestoreCwGsSet, ch)
-}
-
-//总部库
-func startRestoreMdCwGsRef() {
-	ch := make(chan error)
-	w := worker.NewWorkerZb(ch)
-	startWorker(object.TaskKeyRestoreMdCwGsRef, w.RestoreMdCwGsRef, ch)
-}
-
-//启动工作线程
-func startWorker(key object.TaskKey, cmd func(), ch chan error) {
-	s := &object.TaskState{
-		Key:     key,
-		Cron:    nil,
-		CronStr: "",
-		Running: false,
-		Err:     nil,
-	}
-	global.TaskList.Register() <- goToolCommon.NewObject(string(s.Key), s)
-	cronStr, err := getTaskCron(s.Key)
-	if err != nil {
-		s.CronStr = ""
-		s.Err = err
+func errHandle(err error) {
+	if err == nil {
 		return
 	}
-	cronStr = strings.Trim(cronStr, " ")
-	if cronStr == "" {
-		s.Err = errors.New("cron is empty")
-		return
+	log.Error(err.Error())
+	msg := err.Error()
+	sendErr := sendDingTalkTextMsg(msg)
+	if sendErr != nil {
+		log.Error(fmt.Sprintf("send msg,msg: %s, error: %s", msg, sendErr.Error()))
 	}
-	s.CronStr = cronStr
-	c := cron.New()
-	err = c.AddFunc(s.CronStr, cmd)
-	if err != nil {
-		s.Err = err
-		return
-	}
-	c.Start()
-	s.Running = true
-	s.Cron = c
-	go func() {
-		defer func() {
-			close(ch)
-		}()
-		for {
-			select {
-			case err := <-ch:
-				log.Error(err.Error())
-				s.Err = err
-			case <-global.Ctx.Done():
-				return
-			}
-		}
-	}()
 }
 
-//根据key获取任务执行Cron时间公式
-func getTaskCron(key object.TaskKey) (string, error) {
-	repConfig, err := rep.NewConfig()
-	if err != nil {
-		return "", err
+func sendDingTalkTextMsg(msg string) error {
+	dt := dingTalkRobot{
+		config: &object.DingTalkRobotConfigData{
+			FWebHookKey: webHook,
+			FAtMobiles:  "",
+			FIsAtAll:    0,
+		},
 	}
-	taskCron, err := repConfig.GetTaskCronByKey(key)
-	if err != nil {
-		return "", err
-	}
-	if taskCron == nil {
-		return "", errors.New("get taskCron err: return is nil")
-	}
-	return taskCron.Cron, nil
+	return dt.SendMsg(msg)
 }

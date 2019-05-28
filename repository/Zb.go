@@ -50,8 +50,17 @@ const (
 		"[mdyysjtype],[oprtype],[oprtime] " +
 		"FROM [mdyystate]" +
 		"ORDER BY [oprsn] ASC"
+
 	sqlDelMdYyStateOpr = "" +
 		"DELETE FROM [mdyystate] " +
+		"WHERE [oprsn] = ?"
+
+	sqlGetLstMdYyStateRestoreTimeOpr = "" +
+		"SELECT TOP 1 [oprsn],[mdid],[mdyydate],[chanid],[oprtype],[oprtime] " +
+		"FROM [mdyystaterestoretime]" +
+		"ORDER BY [oprsn] ASC"
+	sqlDelMdYyStateRestoreTimeOpr = "" +
+		"DELETE FROM [mdyystaterestoretime] " +
 		"WHERE [oprsn] = ?"
 )
 
@@ -356,4 +365,56 @@ func (r *zb) GetLstMdYyStateOpr() (*object.OprMdYyState, error) {
 func (r *zb) DelMdYyStateOpr(sn int) error {
 	comm := NewCommon()
 	return comm.SetRowsBySQL2000(r.dbConfig, sqlDelMdYyStateOpr, sn)
+}
+
+//获取门店营业日开闭店操作首条记录（不存在则返回nil）
+func (r *zb) GetLstMdYyStateRestoreTimeOpr() (*object.OprMdYyStateRestoreTimeZb, error) {
+	comm := NewCommon()
+	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetLstMdYyStateRestoreTimeOpr)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+	rList := make([]*object.OprMdYyStateRestoreTimeZb, 0)
+	var oprSn, mdId, chanId, oprType int
+	var mdYyDate string
+	var oprTime time.Time
+	for rows.Next() {
+		err = rows.Scan(&oprSn, &mdId, &mdYyDate, &chanId, &oprType, &oprTime)
+		if err != nil {
+			errMsg := fmt.Sprintf("get last mdset opr err: %s", err.Error())
+			log.Error(errMsg)
+			return nil, errors.New(errMsg)
+		}
+		rList = append(rList, &object.OprMdYyStateRestoreTimeZb{
+			OprSn:    oprSn,
+			MdId:     mdId,
+			MdYyDate: mdYyDate,
+			ChanId:   chanId,
+			OprType:  oprType,
+			OprTime:  oprTime,
+		})
+	}
+	if rows.Err() != nil {
+		errMsg := fmt.Sprintf("get last mdcwgsref opr err: %s", rows.Err().Error())
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) > 1 {
+		errMsg := fmt.Sprintf("get last mdcwgsref opr list count err: exp 1 act %d", len(rList))
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) == 0 {
+		return nil, nil
+	}
+	return rList[0], nil
+}
+
+//删除门店营业日开闭店操作记录
+func (r *zb) DelMdYyStateRestoreTimeOpr(sn int) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL2000(r.dbConfig, sqlDelMdYyStateRestoreTimeOpr, sn)
 }

@@ -1,6 +1,7 @@
 package object
 
 import (
+	"context"
 	"github.com/robfig/cron"
 	"time"
 )
@@ -11,6 +12,9 @@ type TaskState struct {
 	CronStr string
 	Running bool
 	Err     error
+
+	Ctx    context.Context
+	Cancel context.CancelFunc
 }
 
 //门店数据传递信道状态
@@ -47,12 +51,22 @@ type OprMdYyStateTransTimeTd struct {
 }
 
 //门店营业日开闭店记录恢复时间（总部库）
-type MdYyStateTransTimeZb struct {
+type MdYyStateRestoreTimeZb struct {
 	MdId         int       //门店ID
 	MdYyDate     string    //门店营业日
 	OpenRestore  time.Time //开店恢复时间
 	CloseRestore time.Time //闭店恢复时间
 	LastUpdate   time.Time //最后更新时间
+}
+
+//门店营业日开闭店记录恢复时间（总部库）（触发器触发）
+type OprMdYyStateRestoreTimeZb struct {
+	OprSn    int       //操作顺序号
+	MdId     int       //门店ID
+	MdYyDate string    //门店营业日
+	ChanId   int       //信道id
+	OprType  int       //操作类型，1-开店恢复、2-闭店恢复
+	OprTime  time.Time //操作时间
 }
 
 //门店营业日开闭店记录（总部库）
@@ -162,4 +176,10 @@ type ZlFixedList struct {
 	FlName  string //固化项中文
 	FlIndex string //固化项索引码
 	FlSn    string //固化项顺序
+}
+
+type DingTalkRobotConfigData struct {
+	FWebHookKey string
+	FAtMobiles  string
+	FIsAtAll    int
 }
