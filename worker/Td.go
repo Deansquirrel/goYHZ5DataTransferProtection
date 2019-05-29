@@ -83,7 +83,7 @@ func (w *td) RestoreMdYyStateTransTime() {
 			w.errChan <- nil
 			return
 		}
-		if lstOpr.OprType != 1 && lstOpr.OprType != 2 && lstOpr.OprType != 3 {
+		if lstOpr.OprType != 1 && lstOpr.OprType != 2 && lstOpr.OprType != 3 && lstOpr.OprType != 4 {
 			errMsg := fmt.Sprintf("opr type err,exp 1 or 2 or 3 or 4,got %d", lstOpr.OprType)
 			log.Error(errMsg)
 			w.errChan <- errors.New(errMsg)
