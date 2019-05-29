@@ -17,9 +17,7 @@ func StartService() error {
 		for {
 			select {
 			case err := <-ch:
-				if err != nil {
-					log.Debug(err.Error())
-				}
+				commWorker.ErrHandle(err)
 			case <-ctx.Done():
 				return
 			}
