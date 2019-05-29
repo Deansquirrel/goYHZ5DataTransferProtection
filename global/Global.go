@@ -23,3 +23,23 @@ var SysConfig *object.SystemConfig
 
 //TaskList
 var TaskList goToolCommon.IObjectManager
+
+var TaskKeyList []object.TaskKey
+
+func init() {
+	TaskKeyList = make([]object.TaskKey, 0)
+
+	//主任务
+	TaskKeyList = append(TaskKeyList, object.TaskKeyHeartBeat)
+	TaskKeyList = append(TaskKeyList, object.TaskKeyRefreshMdDataTransState)
+	TaskKeyList = append(TaskKeyList, object.TaskKeyRestoreMdYyStateTransTime)
+	TaskKeyList = append(TaskKeyList, object.TaskKeyRefreshWaitRestoreDataCount)
+	TaskKeyList = append(TaskKeyList, object.TaskKeyRestoreMdYyStateRestoreTime)
+	TaskKeyList = append(TaskKeyList, object.TaskKeyRestoreMdYyState)
+	TaskKeyList = append(TaskKeyList, object.TaskKeyRestoreMdSet)
+	TaskKeyList = append(TaskKeyList, object.TaskKeyRestoreCwGsSet)
+	TaskKeyList = append(TaskKeyList, object.TaskKeyRestoreMdCwGsRef)
+
+	//辅助任务
+	TaskKeyList = append(TaskKeyList, object.TaskKeyRefreshConfig)
+}

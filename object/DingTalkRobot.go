@@ -1,4 +1,4 @@
-package service
+package object
 
 import (
 	"bytes"
@@ -7,20 +7,26 @@ import (
 	"fmt"
 	"github.com/Deansquirrel/goToolCommon"
 	log "github.com/Deansquirrel/goToolLog"
-	"github.com/Deansquirrel/goYHZ5DataTransferProtection/object"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
-	//TODO 待参数化
+	//TODO 钉钉消息发送服务地址待参数化
 	address = "http://123.57.70.114:10001"
 )
 
 type dingTalkRobot struct {
-	config *object.DingTalkRobotConfigData
+	config *DingTalkRobotConfigData
+}
+
+func NewDingTalkRobot(config *DingTalkRobotConfigData) *dingTalkRobot {
+	return &dingTalkRobot{
+		config: config,
+	}
 }
 
 type dingTalkTextMsg struct {
@@ -35,6 +41,7 @@ func (d *dingTalkRobot) SendMsg(msg string) error {
 	if d.config == nil {
 		return errors.New(fmt.Sprintf("dingTalkRobot config data is nil"))
 	}
+	msg = d.msgFormat(msg)
 	if d.config.FIsAtAll == 1 {
 		return d.sendTextMsgWithAtAll(d.config.FWebHookKey, msg)
 	}
@@ -49,6 +56,10 @@ func (d *dingTalkRobot) SendMsg(msg string) error {
 		}
 	}
 	return d.sendTextMsg(d.config.FWebHookKey, msg)
+}
+
+func (d *dingTalkRobot) msgFormat(msg string) string {
+	return goToolCommon.GetDateTimeStr(time.Now()) + "\n" + msg
 }
 
 func (d *dingTalkRobot) sendTextMsg(webHookKey string, msg string) error {

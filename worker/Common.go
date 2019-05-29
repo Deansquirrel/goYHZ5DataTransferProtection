@@ -11,7 +11,15 @@ import (
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/repository"
 	"github.com/robfig/cron"
 	"strings"
+	"sync"
 )
+
+const (
+	//TODO 钉钉机器人消息Key待参数化
+	webHook = "3dd601535aa95027b92e78b8a820ba62be5069293092a302d8c17ef63e095cac"
+)
+
+var syncLock sync.Mutex
 
 type common struct {
 	errChan chan<- error
@@ -47,12 +55,13 @@ func (c *common) RefreshConfig() {
 		c.errChan <- err
 		return
 	}
-	idList := global.TaskList.GetIdList()
+	idList := global.TaskKeyList
 	for _, id := range idList {
-		t := global.TaskList.GetObject(id)
+		t := global.TaskList.GetObject(string(id))
 		if t == nil {
-			c.errChan <- errors.New(fmt.Sprintf("task cron is nil,key %s", id))
-			return
+			//c.errChan <- errors.New(fmt.Sprintf("task cron is nil,key %s", id))
+			c.startService(id, c.ErrHandle)
+			continue
 		}
 		ts := t.(*object.TaskState)
 		newTs, err := rep.GetTaskCronByKey(ts.Key)
@@ -60,15 +69,18 @@ func (c *common) RefreshConfig() {
 			c.errChan <- err
 			return
 		}
+		c.errChan <- nil
 		if newTs.Cron != ts.CronStr {
-			//TODO 重启服务
+			//停止工作线程
+			c.stopWorker(id)
+			//启动工作线程
+			c.startService(id, c.ErrHandle)
 		}
 	}
-	c.errChan <- nil
 }
 
 //根据Key，启动制定服务
-func (c *common) StartService(key object.TaskKey, errHandle func(err error)) {
+func (c *common) startService(key object.TaskKey, errHandle func(err error)) {
 	switch key {
 	case object.TaskKeyHeartBeat:
 		c.startHeartBeat(errHandle)
@@ -89,7 +101,7 @@ func (c *common) StartService(key object.TaskKey, errHandle func(err error)) {
 	case object.TaskKeyRestoreMdCwGsRef:
 		c.startRestoreMdCwGsRef(errHandle)
 	case object.TaskKeyRefreshConfig:
-		c.startRefreshConfig(errHandle)
+		c.StartRefreshConfig(errHandle)
 	default:
 		errMsg := fmt.Sprintf("unknow task key: %s", key)
 		log.Error(errMsg)
@@ -98,7 +110,7 @@ func (c *common) StartService(key object.TaskKey, errHandle func(err error)) {
 }
 
 //刷新配置
-func (c *common) startRefreshConfig(errHandle func(err error)) {
+func (c *common) StartRefreshConfig(errHandle func(err error)) {
 	ch := make(chan error)
 	comm := NewCommon(ch)
 	c.startWorker(object.TaskKeyRefreshConfig, comm.RefreshConfig, ch, errHandle)
@@ -176,8 +188,16 @@ func (c *common) startWorker(key object.TaskKey, cmd func(), ch chan error, errH
 		Running: false,
 		Err:     nil,
 	}
+	{
+		syncLock.Lock()
+		task := global.TaskList.GetObject(string(s.Key))
+		if task != nil {
+			c.stopWorker(s.Key)
+		}
+		global.TaskList.Register() <- goToolCommon.NewObject(string(s.Key), s)
+		syncLock.Unlock()
+	}
 
-	global.TaskList.Register() <- goToolCommon.NewObject(string(s.Key), s)
 	cronStr, err := c.getTaskCron(s.Key)
 	if err != nil {
 		s.CronStr = ""
@@ -197,6 +217,8 @@ func (c *common) startWorker(key object.TaskKey, cmd func(), ch chan error, errH
 		return
 	}
 
+	log.Debug(fmt.Sprintf("start worker %s cron %s", key, cronStr))
+
 	s.Ctx, s.Cancel = context.WithCancel(context.Background())
 
 	cr.Start()
@@ -212,14 +234,30 @@ func (c *common) startWorker(key object.TaskKey, cmd func(), ch chan error, errH
 				errHandle(err)
 				s.Err = err
 			case <-s.Ctx.Done():
-				s.Cron.Stop()
+				//c.stopWorker(s.Key)
 				return
 			case <-global.Ctx.Done():
-				s.Cron.Stop()
+				//c.stopWorker(s.Key)
 				return
 			}
 		}
 	}()
+}
+
+//停止工作线程
+func (c *common) stopWorker(key object.TaskKey) {
+	t := global.TaskList.GetObject(string(key))
+	if t == nil {
+		return
+	}
+	global.TaskList.Unregister() <- string(key)
+	log.Debug(fmt.Sprintf("stop worker %s", key))
+	ts := t.(*object.TaskState)
+	if ts.Running {
+		ts.Running = false
+		ts.Cron.Stop()
+		ts.Cancel()
+	}
 }
 
 //根据key获取任务执行Cron时间公式
@@ -236,4 +274,20 @@ func (c *common) getTaskCron(key object.TaskKey) (string, error) {
 		return "", errors.New("get taskCron err: return is nil")
 	}
 	return taskCron.Cron, nil
+}
+
+func (c *common) ErrHandle(err error) {
+	if err == nil {
+		return
+	}
+	msg := err.Error()
+	dt := object.NewDingTalkRobot(&object.DingTalkRobotConfigData{
+		FWebHookKey: webHook,
+		FAtMobiles:  "",
+		FIsAtAll:    0,
+	})
+	sendErr := dt.SendMsg(msg)
+	if sendErr != nil {
+		log.Error(fmt.Sprintf("send msg,msg: %s, error: %s", msg, sendErr.Error()))
+	}
 }

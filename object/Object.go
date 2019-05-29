@@ -13,8 +13,8 @@ type TaskState struct {
 	Running bool
 	Err     error
 
-	Ctx    context.Context
-	Cancel context.CancelFunc
+	Ctx    context.Context    `json:"-"`
+	Cancel context.CancelFunc `json:"-"`
 }
 
 //门店数据传递信道状态

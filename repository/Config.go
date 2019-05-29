@@ -224,7 +224,6 @@ func (c *config) UpdateHeartBeat() error {
 
 //获取通道库连接配置
 func (c *config) GetDbConfig(key object.ConnTypeKey) (*goToolMSSql.MSSqlConfig, error) {
-	log.Debug(fmt.Sprintf("获取数据库连接配置[%s]", key))
 	comm := common{}
 	rows, err := comm.GetRowsBySQL(comm.GetConfigDbConfig(), sqlGetConnStrByKey, key)
 	if err != nil {
@@ -257,13 +256,12 @@ func (c *config) GetDbConfig(key object.ConnTypeKey) (*goToolMSSql.MSSqlConfig, 
 		log.Error(errLs.Error())
 		return nil, errLs
 	}
-	log.Debug(connStr[0])
+	//log.Debug(connStr[0])
 	return comm.getDBConfigByStr(connStr[0])
 }
 
 //根据Key获取任务执行时间配置
 func (c *config) GetTaskCronByKey(key object.TaskKey) (*object.TaskCron, error) {
-	log.Debug(fmt.Sprintf("获取任务执行时间[%s]", key))
 	comm := common{}
 	rows, err := comm.GetRowsBySQL(comm.GetConfigDbConfig(), sqlGetCronByKey, key)
 	if err != nil {

@@ -45,7 +45,6 @@ func (c *common) ConvertDbConfigTo2000(dbConfig *goToolMSSql.MSSqlConfig) *goToo
 
 //根据字符串配置，获取数据库连接配置
 func (c *common) getDBConfigByStr(connStr string) (*goToolMSSql.MSSqlConfig, error) {
-	log.Debug(fmt.Sprintf("根据字符串配置，获取数据库连接配置,str: %s", connStr))
 	connStr = strings.Trim(connStr, " ")
 	strList := strings.Split(connStr, "|")
 	if len(strList) != 5 {
