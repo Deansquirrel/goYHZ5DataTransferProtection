@@ -59,7 +59,6 @@ func (c *common) RefreshConfig() {
 	for _, id := range idList {
 		t := global.TaskList.GetObject(string(id))
 		if t == nil {
-			//c.errChan <- errors.New(fmt.Sprintf("task cron is nil,key %s", id))
 			c.startService(id, c.ErrHandle)
 			continue
 		}
@@ -188,6 +187,7 @@ func (c *common) startWorker(key object.TaskKey, cmd func(), ch chan error, errH
 		Running: false,
 		Err:     nil,
 	}
+	s.Ctx, s.Cancel = context.WithCancel(context.Background())
 	{
 		syncLock.Lock()
 		task := global.TaskList.GetObject(string(s.Key))
@@ -198,32 +198,6 @@ func (c *common) startWorker(key object.TaskKey, cmd func(), ch chan error, errH
 		syncLock.Unlock()
 	}
 
-	cronStr, err := c.getTaskCron(s.Key)
-	if err != nil {
-		s.CronStr = ""
-		s.Err = err
-		return
-	}
-	cronStr = strings.Trim(cronStr, " ")
-	if cronStr == "" {
-		s.Err = errors.New("cron is empty")
-		return
-	}
-	s.CronStr = cronStr
-	cr := cron.New()
-	err = cr.AddFunc(s.CronStr, cmd)
-	if err != nil {
-		s.Err = err
-		return
-	}
-
-	log.Debug(fmt.Sprintf("start worker %s cron %s", key, cronStr))
-
-	s.Ctx, s.Cancel = context.WithCancel(context.Background())
-
-	cr.Start()
-	s.Running = true
-	s.Cron = cr
 	go func() {
 		defer func() {
 			close(ch)
@@ -242,6 +216,31 @@ func (c *common) startWorker(key object.TaskKey, cmd func(), ch chan error, errH
 			}
 		}
 	}()
+
+	cronStr, err := c.getTaskCron(s.Key)
+	if err != nil {
+		s.CronStr = ""
+		c.errChan <- err
+		return
+	}
+	cronStr = strings.Trim(cronStr, " ")
+	if cronStr == "" {
+		c.errChan <- errors.New("cron is empty")
+		return
+	}
+	s.CronStr = cronStr
+	cr := cron.New()
+	err = cr.AddFunc(s.CronStr, cmd)
+	if err != nil {
+		c.errChan <- err
+		return
+	}
+
+	log.Debug(fmt.Sprintf("start worker %s cron %s", key, cronStr))
+
+	cr.Start()
+	s.Running = true
+	s.Cron = cr
 }
 
 //停止工作线程
