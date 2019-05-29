@@ -21,7 +21,7 @@ const (
 		"Order by [mdcode] ASC,[chanid] ASC"
 	sqlGetMdDataTransStateDataRowCount = "" +
 		"SELECT COUNT(*) AS NUM " +
-		"FROM %s"
+		"FROM %s WITH(NOLOCK)"
 	sqlGetLstMdYyStateTransTimeTdOpr = "" +
 		"SELECT TOP 1 [oprsn],[mdid],[mdyydate],[chanid],[oprtype],[oprtime] " +
 		"FROM [mdyystatetranstime] " +
