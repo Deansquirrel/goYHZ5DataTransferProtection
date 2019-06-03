@@ -27,6 +27,7 @@ func init() {
 func main() {
 	fmt.Println(global.Version)
 	log.Info(global.Version)
+
 	//解析命令行参数
 	{
 		global.Args.Definition()
@@ -76,7 +77,32 @@ func main() {
 			}
 			return
 		}
-		_ = s.Run()
+
+		//全局错误处理（panic后重启服务）
+		defer func() {
+			err := recover()
+			if err != nil {
+				log.Error(fmt.Sprintf("recover get err: %s", err))
+				log.Warn("service restart")
+				err := s.Restart()
+				if err != nil {
+					log.Error(fmt.Sprintf("service restart err: %s", err.Error()))
+				}
+			} else {
+				log.Debug("recover exist")
+			}
+		}()
+
+		err = s.Run()
+		if err != nil {
+			errMsg := fmt.Sprintf("service run err: %s", err.Error())
+
+			log.Error(errMsg)
+			err = s.Restart()
+			if err != nil {
+				log.Error(fmt.Sprintf("service restart err; %s", err.Error()))
+			}
+		}
 	}
 }
 
