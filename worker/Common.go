@@ -180,6 +180,7 @@ func (c *common) startRestoreMdCwGsRef(errHandle func(err error)) {
 
 //启动工作线程
 func (c *common) startWorker(key object.TaskKey, cmd func(), ch chan error, errHandle func(err error)) {
+	//TODO 增加控制，相同key仅允许单实例运行
 	s := &object.TaskState{
 		Key:     key,
 		Cron:    nil,
