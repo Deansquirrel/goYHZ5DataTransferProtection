@@ -205,7 +205,12 @@ func (c *common) startWorker(key object.TaskKey, cmd func(), ch chan error, errH
 		for {
 			select {
 			case err := <-ch:
-				errHandle(err)
+				if err != nil {
+					errHandle(err)
+				}
+				if s.Err != nil && err == nil {
+					c.sendMsg(fmt.Sprintf("Task %s is resume", key))
+				}
 				s.Err = err
 			case <-s.Ctx.Done():
 				//c.stopWorker(s.Key)
@@ -279,7 +284,10 @@ func (c *common) ErrHandle(err error) {
 	if err == nil {
 		return
 	}
-	msg := err.Error()
+	c.sendMsg(err.Error())
+}
+
+func (c *common) sendMsg(msg string) {
 	dt := object.NewDingTalkRobot(&object.DingTalkRobotConfigData{
 		FWebHookKey: webHook,
 		FAtMobiles:  "",
