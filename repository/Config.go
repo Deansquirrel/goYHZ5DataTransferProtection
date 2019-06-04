@@ -165,7 +165,7 @@ const (
 		"IF EXISTS(SELECT * FROM [mdyystate] WHERE [mdid]=? AND [mdyydate]=?) " +
 		"BEGIN " +
 		"UPDATE [mdyystate] " +
-		"SET [mdyyopentime] = ?,[mdyyclosetime] = ?,[mdyysjtype] = ?,[lastupdate]=getDate() " +
+		"SET [mdyyopentime] = ?,[mdyyclosetime] = ?,[mdyysjtype] = [mdyysjtype]|?,[lastupdate]=getDate() " +
 		"WHERE [mdid]=? AND [mdyydate]=? " +
 		"END " +
 		"ELSE " +
