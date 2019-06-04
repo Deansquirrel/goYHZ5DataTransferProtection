@@ -3,19 +3,9 @@ package worker
 import (
 	"errors"
 	"fmt"
-	"github.com/Deansquirrel/goToolCommon"
 	log "github.com/Deansquirrel/goToolLog"
-	"github.com/Deansquirrel/goYHZ5DataTransferProtection/object"
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/repository"
-	"sync"
 )
-
-var syncLockRefreshWaitRestoreDataCount sync.Mutex
-var syncLockRestoreMdYyStateRestoreTime sync.Mutex
-var syncLockRestoreMdYyState sync.Mutex
-var syncLockRestoreMdSet sync.Mutex
-var syncLockRestoreCwGsSet sync.Mutex
-var syncLockRestoreMdCwGsRef sync.Mutex
 
 type zb struct {
 	errChan chan<- error
@@ -30,22 +20,6 @@ func NewWorkerZb(errChan chan<- error) *zb {
 //刷新待恢复信道数据总量
 func (w *zb) RefreshWaitRestoreDataCount() {
 	log.Debug("刷新待恢复信道数据总量")
-
-	key := object.TaskKeyRefreshWaitRestoreDataCount
-	guid := goToolCommon.Guid()
-	log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
-	syncLockRefreshWaitRestoreDataCount.Lock()
-	defer func() {
-		syncLockRefreshWaitRestoreDataCount.Unlock()
-		//错误处理（panic）
-		err := recover()
-		if err != nil {
-			errMsg := fmt.Sprintf("task recover get err: %s", err)
-			log.Error(errMsg)
-			w.errChan <- errors.New(errMsg)
-		}
-		log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
-	}()
 
 	repZb, err := repository.NewRepZb()
 	if err != nil {
@@ -86,22 +60,6 @@ func (w *zb) RefreshWaitRestoreDataCount() {
 //恢复门店营业日开闭店记录恢复时间
 func (w *zb) RestoreMdYyStateRestoreTime() {
 	log.Debug("恢复门店营业日开闭店记录恢复时间")
-
-	key := object.TaskKeyRestoreMdYyStateRestoreTime
-	guid := goToolCommon.Guid()
-	log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
-	syncLockRestoreMdYyStateRestoreTime.Lock()
-	defer func() {
-		syncLockRestoreMdYyStateRestoreTime.Unlock()
-		//错误处理（panic）
-		err := recover()
-		if err != nil {
-			errMsg := fmt.Sprintf("task recover get err: %s", err)
-			log.Error(errMsg)
-			w.errChan <- errors.New(errMsg)
-		}
-		log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
-	}()
 
 	repZb, err := repository.NewRepZb()
 	if err != nil {
@@ -145,22 +103,6 @@ func (w *zb) RestoreMdYyStateRestoreTime() {
 func (w *zb) RestoreMdYyState() {
 	log.Debug("恢复门店营业日开闭店记录")
 
-	key := object.TaskKeyRestoreMdYyState
-	guid := goToolCommon.Guid()
-	log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
-	syncLockRestoreMdYyState.Lock()
-	defer func() {
-		syncLockRestoreMdYyState.Unlock()
-		//错误处理（panic）
-		err := recover()
-		if err != nil {
-			errMsg := fmt.Sprintf("task recover get err: %s", err)
-			log.Error(errMsg)
-			w.errChan <- errors.New(errMsg)
-		}
-		log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
-	}()
-
 	repZb, err := repository.NewRepZb()
 	if err != nil {
 		w.errChan <- err
@@ -202,22 +144,6 @@ func (w *zb) RestoreMdYyState() {
 //恢复门店设置
 func (w *zb) RestoreMdSet() {
 	log.Debug("恢复门店设置")
-
-	key := object.TaskKeyRestoreMdSet
-	guid := goToolCommon.Guid()
-	log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
-	syncLockRestoreMdSet.Lock()
-	defer func() {
-		syncLockRestoreMdSet.Unlock()
-		//错误处理（panic）
-		err := recover()
-		if err != nil {
-			errMsg := fmt.Sprintf("task recover get err: %s", err)
-			log.Error(errMsg)
-			w.errChan <- errors.New(errMsg)
-		}
-		log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
-	}()
 
 	repZb, err := repository.NewRepZb()
 	if err != nil {
@@ -261,22 +187,6 @@ func (w *zb) RestoreMdSet() {
 func (w *zb) RestoreCwGsSet() {
 	log.Debug("恢复财务公司设置")
 
-	key := object.TaskKeyRestoreCwGsSet
-	guid := goToolCommon.Guid()
-	log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
-	syncLockRestoreCwGsSet.Lock()
-	defer func() {
-		syncLockRestoreCwGsSet.Unlock()
-		//错误处理（panic）
-		err := recover()
-		if err != nil {
-			errMsg := fmt.Sprintf("task recover get err: %s", err)
-			log.Error(errMsg)
-			w.errChan <- errors.New(errMsg)
-		}
-		log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
-	}()
-
 	repZb, err := repository.NewRepZb()
 	if err != nil {
 		w.errChan <- err
@@ -318,22 +228,6 @@ func (w *zb) RestoreCwGsSet() {
 //恢复门店隶属财务公司关系设置
 func (w *zb) RestoreMdCwGsRef() {
 	log.Debug("恢复门店隶属财务公司关系设置")
-
-	key := object.TaskKeyRestoreMdCwGsRef
-	guid := goToolCommon.Guid()
-	log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
-	syncLockRestoreMdCwGsRef.Lock()
-	defer func() {
-		syncLockRestoreMdCwGsRef.Unlock()
-		//错误处理（panic）
-		err := recover()
-		if err != nil {
-			errMsg := fmt.Sprintf("task recover get err: %s", err)
-			log.Error(errMsg)
-			w.errChan <- errors.New(errMsg)
-		}
-		log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
-	}()
 
 	repZb, err := repository.NewRepZb()
 	if err != nil {

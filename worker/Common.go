@@ -17,11 +17,11 @@ import (
 const (
 	//TODO 钉钉机器人消息Key待参数化
 	webHook = "3dd601535aa95027b92e78b8a820ba62be5069293092a302d8c17ef63e095cac"
+	//TODO Task执行超时时间 待参数化(控制待增加)
+	//taskTimeOut = time.Second * 30 * 5
 )
 
 var syncLock sync.Mutex
-var syncLockRefreshHeartBeat sync.Mutex
-var syncLockRefreshConfig sync.Mutex
 
 type common struct {
 	errChan chan<- error
@@ -36,23 +36,6 @@ func NewCommon(errChan chan<- error) *common {
 //刷新心跳时间
 func (c *common) RefreshHeartBeat() {
 	log.Debug("刷新心跳时间")
-
-	key := object.TaskKeyHeartBeat
-	guid := goToolCommon.Guid()
-	log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
-	syncLockRefreshHeartBeat.Lock()
-	defer func() {
-		syncLockRefreshHeartBeat.Unlock()
-		//错误处理（panic）
-		err := recover()
-		if err != nil {
-			errMsg := fmt.Sprintf("task recover get err: %s", err)
-			log.Error(errMsg)
-			c.errChan <- errors.New(errMsg)
-		}
-		log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
-	}()
-
 	rep, err := repository.NewConfig()
 	if err != nil {
 		c.errChan <- err
@@ -69,22 +52,6 @@ func (c *common) RefreshHeartBeat() {
 //刷新配置
 func (c *common) RefreshConfig() {
 	log.Debug("配置刷新")
-
-	key := object.TaskKeyRefreshConfig
-	guid := goToolCommon.Guid()
-	log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
-	syncLockRefreshConfig.Lock()
-	defer func() {
-		syncLockRefreshConfig.Unlock()
-		//错误处理（panic）
-		err := recover()
-		if err != nil {
-			errMsg := fmt.Sprintf("task recover get err: %s", err)
-			log.Error(errMsg)
-			c.errChan <- errors.New(errMsg)
-		}
-		log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
-	}()
 
 	rep, err := repository.NewConfig()
 	if err != nil {
@@ -271,7 +238,24 @@ func (c *common) startWorker(key object.TaskKey, cmd func(), chErr chan error, e
 	}
 	s.CronStr = cronStr
 	cr := cron.New()
-	err = cr.AddFunc(s.CronStr, cmd)
+	err = cr.AddFunc(s.CronStr, func() {
+		guid := goToolCommon.Guid()
+		log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
+		global.TaskSyncLockList[key].Lock()
+
+		defer func() {
+			global.TaskSyncLockList[key].Unlock()
+			//错误处理（panic）
+			err := recover()
+			if err != nil {
+				errMsg := fmt.Sprintf("task recover get err: %s", err)
+				log.Error(errMsg)
+				c.errChan <- errors.New(errMsg)
+			}
+			log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
+		}()
+		cmd()
+	})
 	if err != nil {
 		c.errChan <- err
 		return
