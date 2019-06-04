@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goYHZ5DataTransferProtection/object"
+	"sync"
 )
 
 const (
@@ -25,6 +26,7 @@ var SysConfig *object.SystemConfig
 var TaskList goToolCommon.IObjectManager
 
 var TaskKeyList []object.TaskKey
+var TaskSyncLockList map[object.TaskKey]sync.Mutex
 
 func init() {
 	TaskKeyList = make([]object.TaskKey, 0)
@@ -42,4 +44,11 @@ func init() {
 
 	//辅助任务
 	TaskKeyList = append(TaskKeyList, object.TaskKeyRefreshConfig)
+
+	//任务锁（同一任务不可并行）
+	TaskSyncLockList = make(map[object.TaskKey]sync.Mutex)
+	for _, k := range TaskKeyList {
+		var syncL sync.Mutex
+		TaskSyncLockList[k] = syncL
+	}
 }

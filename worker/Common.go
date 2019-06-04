@@ -20,6 +20,8 @@ const (
 )
 
 var syncLock sync.Mutex
+var syncLockRefreshHeartBeat sync.Mutex
+var syncLockRefreshConfig sync.Mutex
 
 type common struct {
 	errChan chan<- error
@@ -34,6 +36,23 @@ func NewCommon(errChan chan<- error) *common {
 //刷新心跳时间
 func (c *common) RefreshHeartBeat() {
 	log.Debug("刷新心跳时间")
+
+	key := object.TaskKeyHeartBeat
+	guid := goToolCommon.Guid()
+	log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
+	syncLockRefreshHeartBeat.Lock()
+	defer func() {
+		syncLockRefreshHeartBeat.Unlock()
+		//错误处理（panic）
+		err := recover()
+		if err != nil {
+			errMsg := fmt.Sprintf("task recover get err: %s", err)
+			log.Error(errMsg)
+			c.errChan <- errors.New(errMsg)
+		}
+		log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
+	}()
+
 	rep, err := repository.NewConfig()
 	if err != nil {
 		c.errChan <- err
@@ -50,6 +69,23 @@ func (c *common) RefreshHeartBeat() {
 //刷新配置
 func (c *common) RefreshConfig() {
 	log.Debug("配置刷新")
+
+	key := object.TaskKeyRefreshConfig
+	guid := goToolCommon.Guid()
+	log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
+	syncLockRefreshConfig.Lock()
+	defer func() {
+		syncLockRefreshConfig.Unlock()
+		//错误处理（panic）
+		err := recover()
+		if err != nil {
+			errMsg := fmt.Sprintf("task recover get err: %s", err)
+			log.Error(errMsg)
+			c.errChan <- errors.New(errMsg)
+		}
+		log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
+	}()
+
 	rep, err := repository.NewConfig()
 	if err != nil {
 		c.errChan <- err
@@ -179,8 +215,7 @@ func (c *common) startRestoreMdCwGsRef(errHandle func(err error)) {
 }
 
 //启动工作线程
-func (c *common) startWorker(key object.TaskKey, cmd func(), ch chan error, errHandle func(err error)) {
-	//TODO 增加控制，相同key仅允许单实例运行
+func (c *common) startWorker(key object.TaskKey, cmd func(), chErr chan error, errHandle func(err error)) {
 	s := &object.TaskState{
 		Key:     key,
 		Cron:    nil,
@@ -201,11 +236,11 @@ func (c *common) startWorker(key object.TaskKey, cmd func(), ch chan error, errH
 
 	go func() {
 		defer func() {
-			close(ch)
+			close(chErr)
 		}()
 		for {
 			select {
-			case err := <-ch:
+			case err := <-chErr:
 				if err != nil {
 					errHandle(err)
 				}
