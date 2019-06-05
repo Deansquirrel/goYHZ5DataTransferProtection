@@ -81,7 +81,7 @@ func (c *common) RefreshConfig() {
 	}
 }
 
-//根据Key，启动制定服务
+//根据Key，启动特定服务
 func (c *common) startService(key object.TaskKey, errHandle func(err error)) {
 	switch key {
 	case object.TaskKeyHeartBeat:
@@ -208,13 +208,19 @@ func (c *common) startWorker(key object.TaskKey, cmd func(), chErr chan error, e
 		for {
 			select {
 			case err := <-chErr:
+				cs := global.TaskList.GetObject(string(key)).(*object.TaskState)
 				if err != nil {
 					errHandle(err)
+				} else {
+					if cs != nil && cs.Err != nil {
+						msg := fmt.Sprintf("Task %s is resume", key)
+						log.Warn(msg)
+						c.sendMsg(msg)
+					}
 				}
-				if s.Err != nil && err == nil {
-					c.sendMsg(fmt.Sprintf("Task %s is resume", key))
+				if cs != nil {
+					cs.Err = err
 				}
-				s.Err = err
 			case <-s.Ctx.Done():
 				//c.stopWorker(s.Key)
 				return
@@ -301,10 +307,9 @@ func (c *common) getTaskCron(key object.TaskKey) (string, error) {
 }
 
 func (c *common) ErrHandle(err error) {
-	if err == nil {
-		return
+	if err != nil {
+		c.sendMsg(err.Error())
 	}
-	c.sendMsg(err.Error())
 }
 
 func (c *common) sendMsg(msg string) {
